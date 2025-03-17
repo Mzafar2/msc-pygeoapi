@@ -1,0 +1,25 @@
+type: object
+required:
+  - type
+  - geometry
+  - properties
+properties:
+  type:
+    type: string
+    const: Feature
+  geometry:
+    oneOf:
+      - type: 'null'
+      - $ref: geometryGeoJSON.yaml
+  properties:
+    type:
+      - object
+      - null
+  id:
+    type:
+      - string
+      - integer
+  links:
+    type: array
+    items:
+      $ref: link.yaml

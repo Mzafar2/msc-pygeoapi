@@ -43,10 +43,10 @@ def url(pytestconfig):
     return pytestconfig.getoption('url')
 
 
-def test_msc_pygeoapi_service_online(url):
+def est_msc_pygeoapi_service_online(url):
 
     # Define the base directory
-    base_dir = os.path.abspath('tests/test-files/schemas/common-geodata')
+    base_dir = os.path.abspath('tests/test-files/schemasCov/common-geodata')
     print('Base dir:', base_dir)
 
     # Load the schema_a.yaml file (in dir_a)
@@ -104,182 +104,348 @@ def test_msc_pygeoapi_service_online(url):
 
     # Example instance to validate
     # Make a basic request at the URL
-    # response = requests.get(url, verify="/etc/ssl/certs")
-    # instance = response.json()
-
-    instance = {
-        "id":"icoads-sst",
-        "title":"International Comprehensive Ocean-Atmosphere Data Set (ICOADS)",
-        "description":"International Comprehensive Ocean-Atmosphere Data Set (ICOADS)",
-        "keywords":[
-            "icoads",
-            "sst",
-            "air temperature"
-        ],
-        "links":[
-            {
-                "type":"text/html",
-                "rel":"canonical",
-                "title":"information",
-                "href":"https://psl.noaa.gov/data/gridded/data.coads.1deg.html",
-                "hreflang":"en-US"
-            },
-            {
-                "type":"application/json",
-                "rel":"root",
-                "title":"The landing page of this server as JSON",
-                "href":"https://demo.pygeoapi.io/stable?f=json"
-            },
-            {
-                "type":"text/html",
-                "rel":"root",
-                "title":"The landing page of this server as HTML",
-                "href":"https://demo.pygeoapi.io/stable?f=html"
-            },
-            {
-                "type":"application/json",
-                "rel":"self",
-                "title":"This document as JSON",
-                "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst?f=json"
-            },
-            {
-                "type":"application/ld+json",
-                "rel":"alternate",
-                "title":"This document as RDF (JSON-LD)",
-                "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst?f=jsonld"
-            },
-            {
-                "type":"text/html",
-                "rel":"alternate",
-                "title":"This document as HTML",
-                "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst?f=html"
-            },
-            {
-                "type":"application/json",
-                "rel":"data",
-                "title":"position query for this collection as JSON",
-                "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst/position?f=json"
-            },
-            {
-                "type":"text/html",
-                "rel":"data",
-                "title":"position query for this collection as HTML",
-                "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst/position?f=html"
-            },
-            {
-                "type":"application/json",
-                "rel":"data",
-                "title":"cube query for this collection as JSON",
-                "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst/cube?f=json"
-            },
-            {
-                "type":"text/html",
-                "rel":"data",
-                "title":"cube query for this collection as HTML",
-                "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst/cube?f=html"
-            }
-        ],
-        "extent":{
-            "spatial":{
-                "bbox":[
-                    [
-                        -180,
-                        -90,
-                        180,
-                        90
-                    ]
-                ],
-                "crs":"http://www.opengis.net/def/crs/OGC/1.3/CRS84"
-            },
-            "temporal":{
-                "interval":[
-                    [
-                        "2000-01-16T06:00:00+00:00",
-                        "2000-12-16T06:00:00+00:00"
-                    ]
-                ],
-                "definition": "anything"
-            },
-            "other":{
-                "6":7
-            }
-        },
-        "data_queries":{
-            "position":{
-                "link":{
-                    "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst/position",
-                    "rel":"data"
-                }
-            },
-            "cube":{
-                "link":{
-                    "href":"https://demo.pygeoapi.io/stable/collections/icoads-sst/cube",
-                    "rel":"data"
-                }
-            }
-        },
-        "parameter_names":{
-            "SST":{
-                "id":"SST",
-                "type":"Parameter",
-                "name":"SEA SURFACE TEMPERATURE",
-                "unit":{
-                    "label":{
-                        "en":"SEA SURFACE TEMPERATURE"
-                    },
-                    "symbol":{
-                        "value":"Deg C",
-                        "type":"http://www.opengis.net/def/uom/UCUM/"
-                    }
-                }
-            },
-            "AIRT":{
-                "id":"AIRT",
-                "type":"Parameter",
-                "name":"AIR TEMPERATURE",
-                "unit":{
-                    "label":{
-                        "en":"AIR TEMPERATURE"
-                    },
-                    "symbol":{
-                        "value":"DEG C",
-                        "type":"http://www.opengis.net/def/uom/UCUM/"
-                    }
-                }
-            },
-            "UWND":{
-                "id":"UWND",
-                "type":"Parameter",
-                "name":"ZONAL WIND",
-                "unit":{
-                    "label":{
-                        "en":"ZONAL WIND"
-                    },
-                    "symbol":{
-                        "value":"M/S",
-                        "type":"http://www.opengis.net/def/uom/UCUM/"
-                    }
-                }
-            },
-            "VWND":{
-                "id":"VWND",
-                "type":"Parameter",
-                "name":"MERIDIONAL WIND",
-                "unit":{
-                    "label":{
-                        "en":"MERIDIONAL WIND"
-                    },
-                    "symbol":{
-                        "value":"M/S",
-                        "type":"http://www.opengis.net/def/uom/UCUM/"
-                    }
-                }
-            }
-        }
-    }
+    response = requests.get(url, verify="/etc/ssl/certs")
+    instance = response.json()
 
     validator.validate(instance)
 
     # Perform validation, resolving any $ref in the process
     # for error in validator.iter_errors(instance):
     #     print(f"Validation error: {error.message}")
+
+def est_feature_collection_root(url):
+
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals?f=json
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    # Define the base directory
+    base_dir = os.path.abspath('tests/test-files/schemasFeat')
+    print('Base dir:', base_dir)
+
+    # Load the collection.yaml file
+    schema_a_path = os.path.join(base_dir, 'collection.yaml')
+    print('Schema a path:', schema_a_path)
+    with open(schema_a_path, 'r') as f:
+        schema_a = yaml.safe_load(f)
+        print("hereeee", schema_a)
+
+    # Load the other extent.yaml file
+    schema_b_path = os.path.join(base_dir, 'extent.yaml')
+    print('Schema b path:', schema_b_path)
+    with open(schema_b_path, 'r') as f:
+        schema_b = yaml.safe_load(f)
+        print("hereeee", schema_b)
+
+    # Load the other link.yaml file
+    schema_c_path = os.path.join(base_dir, 'link.yaml')
+    print('Schema c path:', schema_c_path)
+    with open(schema_c_path, 'r') as f:
+        schema_c = yaml.safe_load(f)
+        print("hereeee", schema_c)
+
+    # Load the other linkBase.yaml file
+    schema_d_path = os.path.join(base_dir, 'linkBase.yaml')
+    print('Schema d path:', schema_d_path)
+    with open(schema_d_path, 'r') as f:
+        schema_d = yaml.safe_load(f)
+        print("hereeee", schema_d)
+
+    # Load the other linkTemplate.yaml file
+    schema_e_path = os.path.join(base_dir, 'linkTemplate.yaml')
+    print('Schema e path:', schema_e_path)
+    with open(schema_e_path, 'r') as f:
+        schema_e = yaml.safe_load(f)
+        print("hereeee", schema_e)
+
+
+    # resource for schema a
+    resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
+    # resource for schema b
+    resourceB = Resource(contents=schema_b, specification=jsonschema.DRAFT202012)
+    # resource for schema c
+    resourceC = Resource(contents=schema_c, specification=jsonschema.DRAFT202012)
+    # resource for schema d
+    resourceD = Resource(contents=schema_d, specification=jsonschema.DRAFT202012)
+    # resource for schema e
+    resourceE = Resource(contents=schema_e, specification=jsonschema.DRAFT202012)
+
+    registry = Registry().with_resources([(f'{base_dir}', resourceA), ('extent.yaml', resourceB), ('link.yaml', resourceC), ('linkBase.yaml', resourceD), ('linkTemplate.yaml', resourceE)])
+
+    # Register the schema a in the registry as a resource
+    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
+    print(registry)
+    registry = registry.crawl()
+    print(registry)
+
+    print('here is the schema for validator', schema_a)
+    validator = Draft202012Validator(schema_a, registry=registry)
+    validator.validate(instance)
+
+def est_feature_collection_items(url):
+
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items?limit=1&f=json
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    # Define the base directory
+    base_dir = os.path.abspath('tests/test-files/schemasFeat')
+    print('Base dir:', base_dir)
+
+    # Load the featureCollectionGeoJSON.yaml file
+    schema_a_path = os.path.join(base_dir, 'featureCollectionGeoJSON.yaml')
+    print('Schema a path:', schema_a_path)
+    with open(schema_a_path, 'r') as f:
+        schema_a = yaml.safe_load(f)
+        print("hereeee", schema_a)
+
+    # Load the other featureGeoJSON.yaml file
+    schema_b_path = os.path.join(base_dir, 'featureGeoJSON.yaml')
+    print('Schema b path:', schema_b_path)
+    with open(schema_b_path, 'r') as f:
+        schema_b = yaml.safe_load(f)
+        print("hereeee", schema_b)
+
+    # Load the other link.yaml file
+    schema_c_path = os.path.join(base_dir, 'link.yaml')
+    print('Schema c path:', schema_c_path)
+    with open(schema_c_path, 'r') as f:
+        schema_c = yaml.safe_load(f)
+        print("hereeee", schema_c)
+
+    # Load the other linkBase.yaml file
+    schema_d_path = os.path.join(base_dir, 'linkBase.yaml')
+    print('Schema d path:', schema_d_path)
+    with open(schema_d_path, 'r') as f:
+        schema_d = yaml.safe_load(f)
+        print("hereeee", schema_d)
+
+    # Load the other geometryGeoJSON.yaml file
+    schema_e_path = os.path.join(base_dir, 'geometryGeoJSON.yaml')
+    print('Schema e path:', schema_e_path)
+    with open(schema_e_path, 'r') as f:
+        schema_e = yaml.safe_load(f)
+        print("hereeee", schema_e)
+
+        # Load the other pointGeoJSON.yaml file
+    schema_f_path = os.path.join(base_dir, 'pointGeoJSON.yaml')
+    print('Schema f path:', schema_f_path)
+    with open(schema_f_path, 'r') as f:
+        schema_f = yaml.safe_load(f)
+        print("hereeee", schema_f)
+
+        # Load the other multipointGeoJSON.yaml file
+    schema_g_path = os.path.join(base_dir, 'multipointGeoJSON.yaml')
+    print('Schema g path:', schema_g_path)
+    with open(schema_g_path, 'r') as f:
+        schema_g = yaml.safe_load(f)
+        print("hereeee", schema_g)
+
+        # Load the other linestringGeoJSON.yaml file
+    schema_h_path = os.path.join(base_dir, 'linestringGeoJSON.yaml')
+    print('Schema h path:', schema_h_path)
+    with open(schema_h_path, 'r') as f:
+        schema_h = yaml.safe_load(f)
+        print("hereeee", schema_h)
+
+        # Load the other multilinestringGeoJSON.yaml file
+    schema_i_path = os.path.join(base_dir, 'multilinestringGeoJSON.yaml')
+    print('Schema i path:', schema_i_path)
+    with open(schema_i_path, 'r') as f:
+        schema_i = yaml.safe_load(f)
+        print("hereeee", schema_i)
+
+        # Load the other polygonGeoJSON.yaml file
+    schema_j_path = os.path.join(base_dir, 'polygonGeoJSON.yaml')
+    print('Schema j path:', schema_j_path)
+    with open(schema_j_path, 'r') as f:
+        schema_j = yaml.safe_load(f)
+        print("hereeee", schema_j)
+
+        # Load the other multipolygonGeoJSON.yaml file
+    schema_k_path = os.path.join(base_dir, 'multipolygonGeoJSON.yaml')
+    print('Schema k path:', schema_k_path)
+    with open(schema_k_path, 'r') as f:
+        schema_k = yaml.safe_load(f)
+        print("hereeee", schema_k)
+
+        # Load the other geometrycollectionGeoJSON.yaml file
+    schema_l_path = os.path.join(base_dir, 'geometrycollectionGeoJSON.yaml')
+    print('Schema l path:', schema_l_path)
+    with open(schema_l_path, 'r') as f:
+        schema_l = yaml.safe_load(f)
+        print("hereeee", schema_l)
+
+
+    # resource for schema a
+    resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
+    # resource for schema b
+    resourceB = Resource(contents=schema_b, specification=jsonschema.DRAFT202012)
+    # resource for schema c
+    resourceC = Resource(contents=schema_c, specification=jsonschema.DRAFT202012)
+    # resource for schema d
+    resourceD = Resource(contents=schema_d, specification=jsonschema.DRAFT202012)
+    # resource for schema e
+    resourceE = Resource(contents=schema_e, specification=jsonschema.DRAFT202012)
+    # resource for schema f
+    resourceF = Resource(contents=schema_f, specification=jsonschema.DRAFT202012)
+    # resource for schema g
+    resourceG = Resource(contents=schema_g, specification=jsonschema.DRAFT202012)
+    # resource for schema h
+    resourceH = Resource(contents=schema_h, specification=jsonschema.DRAFT202012)
+    # resource for schema i
+    resourceI = Resource(contents=schema_i, specification=jsonschema.DRAFT202012)
+    # resource for schema j
+    resourceJ = Resource(contents=schema_j, specification=jsonschema.DRAFT202012)
+    # resource for schema k
+    resourceK = Resource(contents=schema_k, specification=jsonschema.DRAFT202012)
+    # resource for schema l
+    resourceL = Resource(contents=schema_l, specification=jsonschema.DRAFT202012)
+
+    registry = Registry().with_resources([(f'{base_dir}', resourceA), ('featureGeoJSON.yaml', resourceB), ('link.yaml', resourceC), ('linkBase.yaml', resourceD), ('geometryGeoJSON.yaml', resourceE), ('pointGeoJSON.yaml', resourceF), ('multipointGeoJSON.yaml', resourceG), ('linestringGeoJSON.yaml', resourceH), ('multilinestringGeoJSON.yaml', resourceI), ('polygonGeoJSON.yaml', resourceJ), ('multipolygonGeoJSON.yaml', resourceK), ('geometrycollectionGeoJSON.yaml', resourceL)])
+
+    # Register the schema a in the registry as a resource
+    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
+    print(registry)
+    registry = registry.crawl()
+    print(registry)
+
+    print('here is the schema for validator', schema_a)
+    validator = Draft202012Validator(schema_a, registry=registry)
+    validator.validate(instance)
+
+def test_feature_collection_single_item(url):
+
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items/1664.62.1?f=json
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    # Define the base directory
+    base_dir = os.path.abspath('tests/test-files/schemasFeat')
+    print('Base dir:', base_dir)
+
+
+    # Load the other featureGeoJSON.yaml file
+    schema_b_path = os.path.join(base_dir, 'featureGeoJSON.yaml')
+    print('Schema b path:', schema_b_path)
+    with open(schema_b_path, 'r') as f:
+        schema_b = yaml.safe_load(f)
+        print("hereeee", schema_b)
+
+    # Load the other link.yaml file
+    schema_c_path = os.path.join(base_dir, 'link.yaml')
+    print('Schema c path:', schema_c_path)
+    with open(schema_c_path, 'r') as f:
+        schema_c = yaml.safe_load(f)
+        print("hereeee", schema_c)
+
+    # Load the other linkBase.yaml file
+    schema_d_path = os.path.join(base_dir, 'linkBase.yaml')
+    print('Schema d path:', schema_d_path)
+    with open(schema_d_path, 'r') as f:
+        schema_d = yaml.safe_load(f)
+        print("hereeee", schema_d)
+
+    # Load the other geometryGeoJSON.yaml file
+    schema_e_path = os.path.join(base_dir, 'geometryGeoJSON.yaml')
+    print('Schema e path:', schema_e_path)
+    with open(schema_e_path, 'r') as f:
+        schema_e = yaml.safe_load(f)
+        print("hereeee", schema_e)
+
+        # Load the other pointGeoJSON.yaml file
+    schema_f_path = os.path.join(base_dir, 'pointGeoJSON.yaml')
+    print('Schema f path:', schema_f_path)
+    with open(schema_f_path, 'r') as f:
+        schema_f = yaml.safe_load(f)
+        print("hereeee", schema_f)
+
+        # Load the other multipointGeoJSON.yaml file
+    schema_g_path = os.path.join(base_dir, 'multipointGeoJSON.yaml')
+    print('Schema g path:', schema_g_path)
+    with open(schema_g_path, 'r') as f:
+        schema_g = yaml.safe_load(f)
+        print("hereeee", schema_g)
+
+        # Load the other linestringGeoJSON.yaml file
+    schema_h_path = os.path.join(base_dir, 'linestringGeoJSON.yaml')
+    print('Schema h path:', schema_h_path)
+    with open(schema_h_path, 'r') as f:
+        schema_h = yaml.safe_load(f)
+        print("hereeee", schema_h)
+
+        # Load the other multilinestringGeoJSON.yaml file
+    schema_i_path = os.path.join(base_dir, 'multilinestringGeoJSON.yaml')
+    print('Schema i path:', schema_i_path)
+    with open(schema_i_path, 'r') as f:
+        schema_i = yaml.safe_load(f)
+        print("hereeee", schema_i)
+
+        # Load the other polygonGeoJSON.yaml file
+    schema_j_path = os.path.join(base_dir, 'polygonGeoJSON.yaml')
+    print('Schema j path:', schema_j_path)
+    with open(schema_j_path, 'r') as f:
+        schema_j = yaml.safe_load(f)
+        print("hereeee", schema_j)
+
+        # Load the other multipolygonGeoJSON.yaml file
+    schema_k_path = os.path.join(base_dir, 'multipolygonGeoJSON.yaml')
+    print('Schema k path:', schema_k_path)
+    with open(schema_k_path, 'r') as f:
+        schema_k = yaml.safe_load(f)
+        print("hereeee", schema_k)
+
+        # Load the other geometrycollectionGeoJSON.yaml file
+    schema_l_path = os.path.join(base_dir, 'geometrycollectionGeoJSON.yaml')
+    print('Schema l path:', schema_l_path)
+    with open(schema_l_path, 'r') as f:
+        schema_l = yaml.safe_load(f)
+        print("hereeee", schema_l)
+
+
+    # resource for schema b
+    resourceB = Resource(contents=schema_b, specification=jsonschema.DRAFT202012)
+    # resource for schema c
+    resourceC = Resource(contents=schema_c, specification=jsonschema.DRAFT202012)
+    # resource for schema d
+    resourceD = Resource(contents=schema_d, specification=jsonschema.DRAFT202012)
+    # resource for schema e
+    resourceE = Resource(contents=schema_e, specification=jsonschema.DRAFT202012)
+    # resource for schema f
+    resourceF = Resource(contents=schema_f, specification=jsonschema.DRAFT202012)
+    # resource for schema g
+    resourceG = Resource(contents=schema_g, specification=jsonschema.DRAFT202012)
+    # resource for schema h
+    resourceH = Resource(contents=schema_h, specification=jsonschema.DRAFT202012)
+    # resource for schema i
+    resourceI = Resource(contents=schema_i, specification=jsonschema.DRAFT202012)
+    # resource for schema j
+    resourceJ = Resource(contents=schema_j, specification=jsonschema.DRAFT202012)
+    # resource for schema k
+    resourceK = Resource(contents=schema_k, specification=jsonschema.DRAFT202012)
+    # resource for schema l
+    resourceL = Resource(contents=schema_l, specification=jsonschema.DRAFT202012)
+
+    registry = Registry().with_resources([('featureGeoJSON.yaml', resourceB), ('link.yaml', resourceC), ('linkBase.yaml', resourceD), ('geometryGeoJSON.yaml', resourceE), ('pointGeoJSON.yaml', resourceF), ('multipointGeoJSON.yaml', resourceG), ('linestringGeoJSON.yaml', resourceH), ('multilinestringGeoJSON.yaml', resourceI), ('polygonGeoJSON.yaml', resourceJ), ('multipolygonGeoJSON.yaml', resourceK), ('geometrycollectionGeoJSON.yaml', resourceL)])
+
+    # Register the schema a in the registry as a resource
+    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
+    print(registry)
+    registry = registry.crawl()
+    print(registry)
+
+    print('here is the schema for validator', schema_b)
+    validator = Draft202012Validator(schema_b, registry=registry)
+    validator.validate(instance)

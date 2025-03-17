@@ -1,0 +1,10 @@
+allOf:
+  - $ref: 'linkBase.yaml'
+  - type: object
+    required:
+      - href
+    properties:
+      href:
+        type: string
+        description: The URI of the link target.
+        example: https://data.example.com/buildings/123
