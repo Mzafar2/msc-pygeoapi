@@ -43,77 +43,144 @@ import os
 def url(pytestconfig):
     return pytestconfig.getoption('url')
 
+# def preprocess_none_to_null(data):
+#     """
+#     Recursively process a dictionary or list and replace Python's None values with 'null' (as a string).
+#     """
+#     if isinstance(data, dict):  # Check if it's a dictionary
+#         return {key: preprocess_none_to_null(value) for key, value in data.items()}
+#     elif isinstance(data, list):  # If it's a list
+#         return [preprocess_none_to_null(item) for item in data]
+#     elif data is None:  # If the value is None, replace it with 'null'
+#         return 'null'
+#     else:
+#         return data  # Return the value as-is if it's not None, list, or dict
 
-# def est_msc_pygeoapi_service_online(url):
+# def error_bypass(instance, validator):
+#     # Perform validation and collect all errors
+#     validation_errors = []
+#     for e in validator.iter_errors(instance):
+#         validation_errors.append(str(e))
 
-#     # Define the base directory
-#     base_dir = os.path.abspath('tests/test-files/schemasCov/common-geodata')
-#     print('Base dir:', base_dir)
-
-#     # Load the schema_a.yaml file (in dir_a)
-#     schema_a_path = os.path.join(base_dir, 'collectionDesc.yaml')
-#     print('Schema a path:', schema_a_path)
-#     with open(schema_a_path, 'r') as f:
-#         schema_a = yaml.safe_load(f)
-#         print("hereeee", schema_a)
-
-#     # Load the other schema_b.yaml file (in dir_b)
-#     schema_b_path = os.path.join(base_dir, '../common-core/link.yaml')
-#     print('Schema b path:', schema_b_path)
-#     with open(schema_b_path, 'r') as f:
-#         schema_b = yaml.safe_load(f)
-#         print("hereeee", schema_b)
-
-#     # Load the other schema_c.yaml file (in dir_c)
-#     schema_c_path = os.path.join(base_dir, 'extent-uad.yaml')
-#     print('Schema c path:', schema_c_path)
-#     with open(schema_c_path, 'r') as f:
-#         schema_c = yaml.safe_load(f)
-#         print("hereeee", schema_c)
-
-#     # Load the other schema_d.yaml file (in dir_d)
-#     schema_d_path = os.path.join(base_dir, 'extent.yaml')
-#     print('Schema d path:', schema_d_path)
-#     with open(schema_d_path, 'r') as f:
-#         schema_d = yaml.safe_load(f)
-#         print("hereeee", schema_d)
+#     if validation_errors:
+#         # Print all errors
+#         print("Validation Errors:")
+#         for error in validation_errors:
+#             print(error)
+#     else:
+#         print("No validation errors found.")
 
 
+#  Setup helper functions below
 
-#     # resource for schema a
-#     resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
-#     # resource for schema b
-#     resourceB = Resource(contents=schema_b, specification=jsonschema.DRAFT202012)
-#     # resource for schema c
-#     resourceC = Resource(contents=schema_c, specification=jsonschema.DRAFT202012)
-#     # resource for schema c
-#     resourceD = Resource(contents=schema_d, specification=jsonschema.DRAFT202012)
+def get_feature_collection_root_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
+    urlList = []
 
-#     registry = Registry().with_resources([(f'{base_dir}', resourceA), ('../common-core/link.yaml', resourceB), ('extent-uad.yaml', resourceC), ('extent.yaml', resourceD)])
+    response = requests.get(url, verify="/etc/ssl/certs")
 
-#     # Register the schema a in the registry as a resource
-#     # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
-#     print(registry)
-#     registry = registry.crawl()
-#     print(registry)
+    instance = response.json()
 
-#     print(registry.contents(f'{base_dir}'))
+    assert response.status_code == 200
 
+    for collection in instance['collections']:
+        if 'itemType' in collection and collection['itemType'] == 'feature':
+            urlToAdd = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}?f=json"
+            urlList.append(urlToAdd)
 
-#     validator = Draft202012Validator(schema_a, registry=registry)
+    return urlList
 
 
-#     # Example instance to validate
-#     # Make a basic request at the URL
-#     response = requests.get(url, verify="/etc/ssl/certs")
-#     instance = response.json()
+def get_feature_collection_items_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
+    urlList = []
 
-#     validator.validate(instance)
+    response = requests.get(url, verify="/etc/ssl/certs")
 
-#     # Perform validation, resolving any $ref in the process
-#     # for error in validator.iter_errors(instance):
-#     #     print(f"Validation error: {error.message}")
+    instance = response.json()
 
+    assert response.status_code == 200
+
+    for collection in instance['collections']:
+        if 'itemType' in collection and collection['itemType'] == 'feature':
+            urlToAdd = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/' + collection['id'] + '/items?limit=1&f=json'
+            urlList.append(urlToAdd)
+
+    return urlList
+
+
+def get_feature_collection_single_items_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
+    urlList = []
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    for collection in instance['collections']:
+        if 'itemType' in collection and collection['itemType'] == 'feature':
+            requestUrl = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items?limit=1&f=json"
+
+            try:
+                response2 = requests.get(requestUrl, verify="/etc/ssl/certs")
+                assert response2.status_code == 200
+
+                instance2 = response2.json()
+                itemId = instance2['features'][0]['id']
+                urlToAdd = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items/{itemId}?f=json"
+                urlList.append(urlToAdd)
+
+            except Exception as e:
+                print(f"Error {e}: Could not request items for {collection['id']}")
+
+    return urlList
+
+
+def get_coverage_collection_schema_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
+    urlList = []
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    for collection in instance['collections']:
+        if 'itemType' not in collection:
+            urlToAdd = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/schema?f=json"
+            urlList.append(urlToAdd)
+
+    return urlList
+
+
+def get_coverage_collection_coverageData_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
+    urlList = []
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    for collection in instance['collections']:
+        if 'itemType' not in collection:
+            urlToAdd = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/coverage?f=json"
+            urlList.append(urlToAdd)
+
+    return urlList
+
+# Setup url variables for testing below
+
+featureCollectionRootUrlList = get_feature_collection_root_urls()
+featureCollectionItemsUrlList = get_feature_collection_items_urls()
+featureCollectionSingleItemsUrlList = get_feature_collection_single_items_urls()
+CoverageCollectionSchemaUrlList = get_coverage_collection_schema_urls()
+coverageCollectionCoverageDataUrlList = get_coverage_collection_coverageData_urls()
+
+
+@pytest.mark.parametrize("url", featureCollectionRootUrlList)
 def est_feature_collection_root(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals?f=json
@@ -126,42 +193,31 @@ def est_feature_collection_root(url):
 
     # Define the base directory
     base_dir = os.path.abspath('tests/test-files/schemasFeat')
-    print('Base dir:', base_dir)
 
     # Load the collection.yaml file
     schema_a_path = os.path.join(base_dir, 'collection.yaml')
-    print('Schema a path:', schema_a_path)
     with open(schema_a_path, 'r') as f:
         schema_a = yaml.safe_load(f)
-        print("hereeee", schema_a)
 
     # Load the other extent.yaml file
     schema_b_path = os.path.join(base_dir, 'extent.yaml')
-    print('Schema b path:', schema_b_path)
     with open(schema_b_path, 'r') as f:
         schema_b = yaml.safe_load(f)
-        print("hereeee", schema_b)
 
     # Load the other link.yaml file
     schema_c_path = os.path.join(base_dir, 'link.yaml')
-    print('Schema c path:', schema_c_path)
     with open(schema_c_path, 'r') as f:
         schema_c = yaml.safe_load(f)
-        print("hereeee", schema_c)
 
     # Load the other linkBase.yaml file
     schema_d_path = os.path.join(base_dir, 'linkBase.yaml')
-    print('Schema d path:', schema_d_path)
     with open(schema_d_path, 'r') as f:
         schema_d = yaml.safe_load(f)
-        print("hereeee", schema_d)
 
     # Load the other linkTemplate.yaml file
     schema_e_path = os.path.join(base_dir, 'linkTemplate.yaml')
-    print('Schema e path:', schema_e_path)
     with open(schema_e_path, 'r') as f:
         schema_e = yaml.safe_load(f)
-        print("hereeee", schema_e)
 
 
     # resource for schema a
@@ -179,14 +235,12 @@ def est_feature_collection_root(url):
 
     # Register the schema a in the registry as a resource
     # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
-    print(registry)
     registry = registry.crawl()
-    print(registry)
 
-    print('here is the schema for validator', schema_a)
     validator = Draft202012Validator(schema_a, registry=registry)
     validator.validate(instance)
 
+@pytest.mark.parametrize("url", featureCollectionItemsUrlList)
 def est_feature_collection_items(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items?limit=1&f=json
@@ -195,95 +249,72 @@ def est_feature_collection_items(url):
 
     instance = response.json()
 
+
     assert response.status_code == 200
+
 
     # Define the base directory
     base_dir = os.path.abspath('tests/test-files/schemasFeat')
-    print('Base dir:', base_dir)
 
     # Load the featureCollectionGeoJSON.yaml file
     schema_a_path = os.path.join(base_dir, 'featureCollectionGeoJSON.yaml')
-    print('Schema a path:', schema_a_path)
     with open(schema_a_path, 'r') as f:
         schema_a = yaml.safe_load(f)
-        print("hereeee", schema_a)
 
     # Load the other featureGeoJSON.yaml file
     schema_b_path = os.path.join(base_dir, 'featureGeoJSON.yaml')
-    print('Schema b path:', schema_b_path)
     with open(schema_b_path, 'r') as f:
         schema_b = yaml.safe_load(f)
-        print("hereeee", schema_b)
 
     # Load the other link.yaml file
     schema_c_path = os.path.join(base_dir, 'link.yaml')
-    print('Schema c path:', schema_c_path)
     with open(schema_c_path, 'r') as f:
         schema_c = yaml.safe_load(f)
-        print("hereeee", schema_c)
 
     # Load the other linkBase.yaml file
     schema_d_path = os.path.join(base_dir, 'linkBase.yaml')
-    print('Schema d path:', schema_d_path)
     with open(schema_d_path, 'r') as f:
         schema_d = yaml.safe_load(f)
-        print("hereeee", schema_d)
 
     # Load the other geometryGeoJSON.yaml file
     schema_e_path = os.path.join(base_dir, 'geometryGeoJSON.yaml')
-    print('Schema e path:', schema_e_path)
     with open(schema_e_path, 'r') as f:
         schema_e = yaml.safe_load(f)
-        print("hereeee", schema_e)
 
         # Load the other pointGeoJSON.yaml file
     schema_f_path = os.path.join(base_dir, 'pointGeoJSON.yaml')
-    print('Schema f path:', schema_f_path)
     with open(schema_f_path, 'r') as f:
         schema_f = yaml.safe_load(f)
-        print("hereeee", schema_f)
 
         # Load the other multipointGeoJSON.yaml file
     schema_g_path = os.path.join(base_dir, 'multipointGeoJSON.yaml')
-    print('Schema g path:', schema_g_path)
     with open(schema_g_path, 'r') as f:
         schema_g = yaml.safe_load(f)
-        print("hereeee", schema_g)
 
         # Load the other linestringGeoJSON.yaml file
     schema_h_path = os.path.join(base_dir, 'linestringGeoJSON.yaml')
-    print('Schema h path:', schema_h_path)
     with open(schema_h_path, 'r') as f:
         schema_h = yaml.safe_load(f)
-        print("hereeee", schema_h)
 
         # Load the other multilinestringGeoJSON.yaml file
     schema_i_path = os.path.join(base_dir, 'multilinestringGeoJSON.yaml')
-    print('Schema i path:', schema_i_path)
     with open(schema_i_path, 'r') as f:
         schema_i = yaml.safe_load(f)
-        print("hereeee", schema_i)
 
         # Load the other polygonGeoJSON.yaml file
     schema_j_path = os.path.join(base_dir, 'polygonGeoJSON.yaml')
-    print('Schema j path:', schema_j_path)
     with open(schema_j_path, 'r') as f:
         schema_j = yaml.safe_load(f)
-        print("hereeee", schema_j)
 
         # Load the other multipolygonGeoJSON.yaml file
     schema_k_path = os.path.join(base_dir, 'multipolygonGeoJSON.yaml')
-    print('Schema k path:', schema_k_path)
     with open(schema_k_path, 'r') as f:
         schema_k = yaml.safe_load(f)
-        print("hereeee", schema_k)
 
         # Load the other geometrycollectionGeoJSON.yaml file
     schema_l_path = os.path.join(base_dir, 'geometrycollectionGeoJSON.yaml')
-    print('Schema l path:', schema_l_path)
     with open(schema_l_path, 'r') as f:
         schema_l = yaml.safe_load(f)
-        print("hereeee", schema_l)
 
 
     # resource for schema a
@@ -314,15 +345,13 @@ def est_feature_collection_items(url):
     registry = Registry().with_resources([(f'{base_dir}', resourceA), ('featureGeoJSON.yaml', resourceB), ('link.yaml', resourceC), ('linkBase.yaml', resourceD), ('geometryGeoJSON.yaml', resourceE), ('pointGeoJSON.yaml', resourceF), ('multipointGeoJSON.yaml', resourceG), ('linestringGeoJSON.yaml', resourceH), ('multilinestringGeoJSON.yaml', resourceI), ('polygonGeoJSON.yaml', resourceJ), ('multipolygonGeoJSON.yaml', resourceK), ('geometrycollectionGeoJSON.yaml', resourceL)])
 
     # Register the schema a in the registry as a resource
-    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
-    print(registry)
     registry = registry.crawl()
-    print(registry)
 
-    print('here is the schema for validator', schema_a)
     validator = Draft202012Validator(schema_a, registry=registry)
     validator.validate(instance)
 
+
+@pytest.mark.parametrize("url", featureCollectionSingleItemsUrlList)
 def est_feature_collection_single_item(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items/1664.62.1?f=json
@@ -335,85 +364,62 @@ def est_feature_collection_single_item(url):
 
     # Define the base directory
     base_dir = os.path.abspath('tests/test-files/schemasFeat')
-    print('Base dir:', base_dir)
 
 
     # Load the other featureGeoJSON.yaml file
     schema_b_path = os.path.join(base_dir, 'featureGeoJSON.yaml')
-    print('Schema b path:', schema_b_path)
     with open(schema_b_path, 'r') as f:
         schema_b = yaml.safe_load(f)
-        print("hereeee", schema_b)
 
     # Load the other link.yaml file
     schema_c_path = os.path.join(base_dir, 'link.yaml')
-    print('Schema c path:', schema_c_path)
     with open(schema_c_path, 'r') as f:
         schema_c = yaml.safe_load(f)
-        print("hereeee", schema_c)
 
     # Load the other linkBase.yaml file
     schema_d_path = os.path.join(base_dir, 'linkBase.yaml')
-    print('Schema d path:', schema_d_path)
     with open(schema_d_path, 'r') as f:
         schema_d = yaml.safe_load(f)
-        print("hereeee", schema_d)
 
     # Load the other geometryGeoJSON.yaml file
     schema_e_path = os.path.join(base_dir, 'geometryGeoJSON.yaml')
-    print('Schema e path:', schema_e_path)
     with open(schema_e_path, 'r') as f:
         schema_e = yaml.safe_load(f)
-        print("hereeee", schema_e)
 
         # Load the other pointGeoJSON.yaml file
     schema_f_path = os.path.join(base_dir, 'pointGeoJSON.yaml')
-    print('Schema f path:', schema_f_path)
     with open(schema_f_path, 'r') as f:
         schema_f = yaml.safe_load(f)
-        print("hereeee", schema_f)
 
         # Load the other multipointGeoJSON.yaml file
     schema_g_path = os.path.join(base_dir, 'multipointGeoJSON.yaml')
-    print('Schema g path:', schema_g_path)
     with open(schema_g_path, 'r') as f:
         schema_g = yaml.safe_load(f)
-        print("hereeee", schema_g)
 
         # Load the other linestringGeoJSON.yaml file
     schema_h_path = os.path.join(base_dir, 'linestringGeoJSON.yaml')
-    print('Schema h path:', schema_h_path)
     with open(schema_h_path, 'r') as f:
         schema_h = yaml.safe_load(f)
-        print("hereeee", schema_h)
 
         # Load the other multilinestringGeoJSON.yaml file
     schema_i_path = os.path.join(base_dir, 'multilinestringGeoJSON.yaml')
-    print('Schema i path:', schema_i_path)
     with open(schema_i_path, 'r') as f:
         schema_i = yaml.safe_load(f)
-        print("hereeee", schema_i)
 
         # Load the other polygonGeoJSON.yaml file
     schema_j_path = os.path.join(base_dir, 'polygonGeoJSON.yaml')
-    print('Schema j path:', schema_j_path)
     with open(schema_j_path, 'r') as f:
         schema_j = yaml.safe_load(f)
-        print("hereeee", schema_j)
 
         # Load the other multipolygonGeoJSON.yaml file
     schema_k_path = os.path.join(base_dir, 'multipolygonGeoJSON.yaml')
-    print('Schema k path:', schema_k_path)
     with open(schema_k_path, 'r') as f:
         schema_k = yaml.safe_load(f)
-        print("hereeee", schema_k)
 
         # Load the other geometrycollectionGeoJSON.yaml file
     schema_l_path = os.path.join(base_dir, 'geometrycollectionGeoJSON.yaml')
-    print('Schema l path:', schema_l_path)
     with open(schema_l_path, 'r') as f:
         schema_l = yaml.safe_load(f)
-        print("hereeee", schema_l)
 
 
     # resource for schema b
@@ -442,17 +448,59 @@ def est_feature_collection_single_item(url):
     registry = Registry().with_resources([('featureGeoJSON.yaml', resourceB), ('link.yaml', resourceC), ('linkBase.yaml', resourceD), ('geometryGeoJSON.yaml', resourceE), ('pointGeoJSON.yaml', resourceF), ('multipointGeoJSON.yaml', resourceG), ('linestringGeoJSON.yaml', resourceH), ('multilinestringGeoJSON.yaml', resourceI), ('polygonGeoJSON.yaml', resourceJ), ('multipolygonGeoJSON.yaml', resourceK), ('geometrycollectionGeoJSON.yaml', resourceL)])
 
     # Register the schema a in the registry as a resource
-    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
-    print(registry)
     registry = registry.crawl()
-    print(registry)
 
-    print('here is the schema for validator', schema_b)
     validator = Draft202012Validator(schema_b, registry=registry)
     validator.validate(instance)
 
-def test_feature(url):
-    #test with this url:  https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json
+# def est_all_features(url):
+#     #test with this url:  https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json
+
+#     response = requests.get(url, verify="/etc/ssl/certs")
+
+#     instance = response.json()
+
+#     assert response.status_code == 200
+
+#     # print(json.dumps(instance, indent=4))
+#     # print(instance['collections'][0]['title'])
+
+#     for collection in instance['collections']:
+#         if 'itemType' in collection and collection['itemType'] == 'feature':
+#             # print(collection['id'])
+#             url1 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}?f=json"
+#             url2 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items?limit=1&f=json"
+
+#             try:
+
+#                 response2 = requests.get(url2, verify="/etc/ssl/certs")
+
+#                 assert response2.status_code == 200
+
+#                 instance2 = response2.json()
+
+#                 itemId = instance2['features'][0]['id']
+
+#             except Exception as e:
+#                 # Catch any exception that occurs and handle it here
+#                 print(f"An error occurred********************************************************: {e}")
+
+#             url3 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items/{itemId}?f=json"
+
+#             print('----------------')
+#             print(itemId)
+#             print('----------------')
+#             print(url1)
+#             print(url2)
+#             print(url3)
+#             est_feature_collection_root(url1)
+#             est_feature_collection_items(url2)
+#             est_feature_collection_single_item(url3)
+
+
+@pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
+def est_coverage_collection_schema(url):
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
 
     response = requests.get(url, verify="/etc/ssl/certs")
 
@@ -460,37 +508,201 @@ def test_feature(url):
 
     assert response.status_code == 200
 
-    print(json.dumps(instance, indent=4))
-    print(instance['collections'][0]['title'])
-
-    for collection in instance['collections']:
-        if 'itemType' in collection and collection['itemType'] == 'feature':
-            print(collection['id'])
-            url1 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}?f=json"
-            url2 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items?limit=1&f=json"
-
-            try:
-
-                response2 = requests.get(url2, verify="/etc/ssl/certs")
-
-                instance2 = response2.json()
-                print(url1)
-                itemId = instance2['features'][0]['id']
-
-            except Exception as e:
-                # Catch any exception that occurs and handle it here
-                print(f"An error occurred: {e}")
-
-            url3 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items/{itemId}?f=json"
-
-            print(url1)
-            print(url2)
-            print(url3)
-            print('----------------')
-            print(itemId)
-            print('----------------')
-            est_feature_collection_root(url1)
-            est_feature_collection_items(url2)
-            est_feature_collection_single_item(url3)
+    # Define the base directory
+    base_dir = os.path.abspath('tests/test-files/schemasCov')
 
 
+    # Load the collection.yaml file
+    schema_a_path = os.path.join(base_dir, 'tms/propertiesSchema.yaml')
+    with open(schema_a_path, 'r') as f:
+        schema_a = yaml.safe_load(f)
+
+
+
+    # resource for schema a
+    resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
+
+
+    registry = Registry().with_resources([(f'{base_dir}', resourceA)])
+
+    # Register the schema a in the registry as a resource
+    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
+    registry = registry.crawl()
+
+    # instance = preprocess_none_to_null(instance)
+
+
+    validator = Draft202012Validator(schema_a, registry=registry)
+    validator.validate(instance)
+
+@pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
+def est_coverage_collection_coverageResponse(url):
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json
+    # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
+    # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    # Define the base directory
+    base_dir = os.path.abspath('tests/test-files/schemasCov')
+
+    # Load the collection.yaml file
+    schema_a_path = os.path.join(base_dir, 'coverage.json')
+    with open(schema_a_path, 'r') as f:
+        schema_a = json.load(f)
+
+    # resource for schema a
+    resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
+
+
+    registry = Registry().with_resources([(f'{base_dir}', resourceA)])
+
+    # Register the schema a in the registry as a resource
+    registry = registry.crawl()
+
+    validator = Draft202012Validator(schema_a, registry=registry)
+
+    validator.validate(instance)
+
+
+@pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
+def est_coverage_collection_eachVariableProperty(url):
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    for property in instance['properties']:
+        a=url.replace('/schema?f=json', f'/coverage?f=json&properties={property}')
+
+        est_coverage_collection_coverageResponse(a)
+
+
+def est_coverage_collection_extents(url):
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+
+    bbox = instance['extent']['spatial']['bbox'][0]
+    bboxString = ",".join(map(str, bbox))
+
+
+    newUrl=url.replace('?f=json', '/schema?f=json')
+
+
+
+    response = requests.get(newUrl, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+
+
+    assert response.status_code == 200
+    print('properties')
+    for property in instance['properties']:
+        print(' NEW PROPERTYYYYYYYYYYYYYYYYYYYYYYYYY')
+        print(property)
+        a=newUrl.replace('/schema?f=json', f'/coverage?f=json&properties={property}&bbox={bboxString}')
+
+
+        est_coverage_collection_coverageResponse(a)
+
+
+# def est_all_coverages(url):
+#     #test with this url:  https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json
+
+#     response = requests.get(url, verify="/etc/ssl/certs")
+
+#     instance = response.json()
+
+#     assert response.status_code == 200
+
+#     # print(json.dumps(instance, indent=4))
+#     # print(instance['collections'][0]['title'])
+
+#     for collection in instance['collections']:
+#         if 'itemType' not in collection:
+#             print(collection['id'])
+
+
+def est_process_collection(url):
+
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill?f=json
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    print(instance)
+
+    # Define the base directory
+    base_dir = os.path.abspath('tests/test-files/schemasProc')
+
+    # Load the landingPage.yaml file
+    schema_a_path = os.path.join(base_dir, 'landingPage.yaml')
+    with open(schema_a_path, 'r') as f:
+        schema_a = yaml.safe_load(f)
+
+    schema_b_path = os.path.join(base_dir, 'link.yaml')
+    with open(schema_b_path, 'r') as f:
+        schema_b = yaml.safe_load(f)
+
+    # resource for schema a
+    resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
+
+    # resource for schema b
+    resourceB = Resource(contents=schema_b, specification=jsonschema.DRAFT202012)
+
+    registry = Registry().with_resources([('landingPage.yaml', resourceA), ('link.yaml', resourceB)])
+
+    # Register the schema a in the registry as a resource
+    registry = registry.crawl()
+
+    validator = Draft202012Validator(schema_a, registry=registry)
+    validator.validate(instance)
+
+
+def test_process_collection_execute(url):
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill/execution
+
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill/execution'
+
+    # Data to send with the request (typically a dictionary)
+    data = {
+          "inputs": {
+            "format": "CSV",
+            "layer": "CMIP5.TT.RCP26.YEAR.ANO_PCTL50",
+            "x": -114.74968888274337,
+            "y": 51.132831196692806
+            }
+    }
+
+    # Sending a POST request with the data
+    response = requests.post(url, json=data, verify="/etc/ssl/certs")
+
+    # Checking the response status code
+    print(f"Status Code: {response.status_code}")
+
+    # Printing the response content (usually JSON or HTML)
+    print(f"Response Content: {response.text}")
+
+
+
+
+
+# testing some stuff here
+# used below

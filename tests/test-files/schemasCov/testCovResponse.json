@@ -1,0 +1,60 @@
+{
+  "type": "Coverage",
+  "domain": {
+    "type": "Domain",
+    "domainType": "Grid",
+    "axes": {
+      "x": {
+        "start": -141,
+        "stop": -137,
+        "num": 5
+      },
+      "y": {
+        "start": 47,
+        "stop": 45,
+        "num": 3
+      }
+    },
+    "referencing": [
+      {
+        "coordinates": [
+          "x",
+          "y"
+        ],
+        "system": {
+          "type": "GeographicCRS",
+          "id": "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
+        }
+      }
+    ]
+  },
+  "parameters": {
+    "ProbTMP06": {
+      "type": "Parameter",
+      "description": {
+        "en": "06 hr Prob of Temperature \u003E 0 K [%]"
+      },
+      "unit": {
+        "symbol": "[%]"
+      },
+      "observedProperty": {
+        "id": "2-HTGL",
+        "label": {
+          "en": "06 hr Prob of Temperature \u003E 0 K [%]"
+        }
+      }
+    }
+  },
+  "ranges": {
+    "ProbTMP06": {
+      "type": "NdArray",
+      "dataType": "float",
+      "axisNames": [
+        "y",
+        "x"
+      ],
+      "shape": [3, 5],
+      "values": [null, 83.0679779052734, 83.3429794311523, 83.4429779052734, 83.2679748535156, null, 81.7429733276367, 81.6929779052734, 81.9179763793945, 82.0179748535156, null, 81.5679779052734, 80.6929779052734, 80.4429779052734, 80.1929779052734]
+    }
+  }
+}
