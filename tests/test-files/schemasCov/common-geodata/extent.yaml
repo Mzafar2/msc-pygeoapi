@@ -95,8 +95,8 @@ properties:
             * Maximum value, coordinate axis 3 (optional)
           type: array
           oneOf:
-          - minItems: 3
-            maxItems: 3
+          - minItems: 4
+            maxItems: 4
           - minItems: 6
             maxItems: 6
           items:

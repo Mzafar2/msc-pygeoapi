@@ -3,7 +3,7 @@ description: |-
   The extent module only addresses spatial and temporal extents. This module extends extent by specifying how
   intervals and crs properties can be used to specify additional geometries.
 oneOf:
-  # - $ref: 'extent.yaml'
+  - $ref: 'extent.yaml'
   - type: object
     additionalProperties:
        description: |-
@@ -13,7 +13,6 @@ oneOf:
          - required: [ interval, definition ]
          - required: [ interval, trs ]
          - required: [ interval, vrs ]
-        #  - required: [ interval ]
        properties:
          interval:
            description: |-

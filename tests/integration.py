@@ -31,7 +31,7 @@ import pytest
 import requests
 import yaml
 import jsonschema
-from jsonschema import validate
+from jsonschema import ValidationError, validate
 from jsonschema import Draft202012Validator
 from jsonschema import exceptions
 from referencing import Registry, Resource, jsonschema
@@ -137,6 +137,22 @@ def get_feature_collection_single_items_urls():
 
     return urlList
 
+def get_coverage_collection_root_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
+    urlList = []
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    for collection in instance['collections']:
+        if 'itemType' not in collection:
+            urlToAdd = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}?f=json"
+            urlList.append(urlToAdd)
+
+    return urlList
+
 
 def get_coverage_collection_schema_urls():
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
@@ -171,14 +187,47 @@ def get_coverage_collection_coverageData_urls():
 
     return urlList
 
+def get_process_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes?f=json'
+    urlList = []
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    for process in instance['processes']:
+        urlToAdd = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/{process['id']}?f=json"
+        urlList.append(urlToAdd)
+
+    return urlList
+
+def get_process_execution_urls():
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes?f=json'
+    urlList = []
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    instance = response.json()
+
+    assert response.status_code == 200
+
+    for process in instance['processes']:
+        urlToAdd = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/{process['id']}/execution?f=json"
+        urlList.append(urlToAdd)
+
+    return urlList
+
+
 # Setup url variables for testing below
 
 featureCollectionRootUrlList = get_feature_collection_root_urls()
 featureCollectionItemsUrlList = get_feature_collection_items_urls()
 featureCollectionSingleItemsUrlList = get_feature_collection_single_items_urls()
+CoverageCollectionRootUrlList = get_coverage_collection_root_urls()
 CoverageCollectionSchemaUrlList = get_coverage_collection_schema_urls()
 coverageCollectionCoverageDataUrlList = get_coverage_collection_coverageData_urls()
-
+processUrlList = get_process_urls()
+processExecutionUrlList = get_process_execution_urls()
 
 @pytest.mark.parametrize("url", featureCollectionRootUrlList)
 def est_feature_collection_root(url):
@@ -453,50 +502,63 @@ def est_feature_collection_single_item(url):
     validator = Draft202012Validator(schema_b, registry=registry)
     validator.validate(instance)
 
-# def est_all_features(url):
-#     #test with this url:  https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json
+@pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
+def est_coverage_collection_root(url):
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
+    response = requests.get(url, verify="/etc/ssl/certs")
 
-#     response = requests.get(url, verify="/etc/ssl/certs")
+    instance = response.json()
 
-#     instance = response.json()
+    assert response.status_code == 200
 
-#     assert response.status_code == 200
+    # Define the base directory
+    base_dir = os.path.abspath('tests/test-files/schemasCov')
 
-#     # print(json.dumps(instance, indent=4))
-#     # print(instance['collections'][0]['title'])
+    # Load the collection.yaml file
+    schema_a_path = os.path.join(base_dir, 'common-geodata/collectionDesc.yaml')
+    with open(schema_a_path, 'r') as f:
+        schema_a = yaml.safe_load(f)
 
-#     for collection in instance['collections']:
-#         if 'itemType' in collection and collection['itemType'] == 'feature':
-#             # print(collection['id'])
-#             url1 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}?f=json"
-#             url2 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items?limit=1&f=json"
+    # Load the other extent.yaml file
+    schema_b_path = os.path.join(base_dir, 'common-geodata/extent-uad.yaml')
+    with open(schema_b_path, 'r') as f:
+        schema_b = yaml.safe_load(f)
 
-#             try:
+    # Load the other link.yaml file
+    schema_c_path = os.path.join(base_dir, 'common-core/link.yaml')
+    with open(schema_c_path, 'r') as f:
+        schema_c = yaml.safe_load(f)
 
-#                 response2 = requests.get(url2, verify="/etc/ssl/certs")
+    # Load the other linkBase.yaml file
+    schema_d_path = os.path.join(base_dir, 'common-geodata/dataType.yaml')
+    with open(schema_d_path, 'r') as f:
+        schema_d = yaml.safe_load(f)
 
-#                 assert response2.status_code == 200
+    # Load the other linkTemplate.yaml file
+    schema_e_path = os.path.join(base_dir, 'common-geodata/extent.yaml')
+    with open(schema_e_path, 'r') as f:
+        schema_e = yaml.safe_load(f)
 
-#                 instance2 = response2.json()
 
-#                 itemId = instance2['features'][0]['id']
+    # resource for schema a
+    resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
+    # resource for schema b
+    resourceB = Resource(contents=schema_b, specification=jsonschema.DRAFT202012)
+    # resource for schema c
+    resourceC = Resource(contents=schema_c, specification=jsonschema.DRAFT202012)
+    # resource for schema d
+    resourceD = Resource(contents=schema_d, specification=jsonschema.DRAFT202012)
+    # resource for schema e
+    resourceE = Resource(contents=schema_e, specification=jsonschema.DRAFT202012)
 
-#             except Exception as e:
-#                 # Catch any exception that occurs and handle it here
-#                 print(f"An error occurred********************************************************: {e}")
+    registry = Registry().with_resources([('/common-geodata/collectionDesc.yaml', resourceA), ('extent-uad.yaml', resourceB), ('../common-core/link.yaml', resourceC), ('../../schemas/common-geodata/dataType.yaml', resourceD), ('extent.yaml', resourceE)])
 
-#             url3 = f"https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/{collection['id']}/items/{itemId}?f=json"
+    # Register the schema a in the registry as a resource
+    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
+    registry = registry.crawl()
 
-#             print('----------------')
-#             print(itemId)
-#             print('----------------')
-#             print(url1)
-#             print(url2)
-#             print(url3)
-#             est_feature_collection_root(url1)
-#             est_feature_collection_items(url2)
-#             est_feature_collection_single_item(url3)
-
+    validator = Draft202012Validator(schema_a, registry=registry)
+    validator.validate(instance)
 
 @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
 def est_coverage_collection_schema(url):
@@ -535,12 +597,13 @@ def est_coverage_collection_schema(url):
     validator = Draft202012Validator(schema_a, registry=registry)
     validator.validate(instance)
 
-@pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
-def est_coverage_collection_coverageResponse(url):
+# @pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
+def test_coverage_collection_coverageResponse(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json
     # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
     # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
 
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cmip5:projected:annual:anomaly/coverage?f=json'
     response = requests.get(url, verify="/etc/ssl/certs")
 
     instance = response.json()
@@ -566,7 +629,49 @@ def est_coverage_collection_coverageResponse(url):
 
     validator = Draft202012Validator(schema_a, registry=registry)
 
-    validator.validate(instance)
+    # validator.validate(instance)
+
+
+
+    # Collect all errors
+    # errors = list(validator.iter_errors(instance))
+
+    # if errors:
+    #     # Build a detailed error message
+    #     error_messages = [f"Validation error: {error.message} at {list(error.path)}" for error in errors]
+        
+    #     # Raise a ValidationError with all error messages
+    #     raise ValidationError(" | ".join(error_messages))
+    # else:
+    #     print("Instance is valid.")
+
+
+    # Collect all errors
+    errors = list(validator.iter_errors(instance))
+
+    if errors:
+        # Build a detailed error message that includes schema and instance paths
+        error_messages = []
+        for error in errors:
+            # Format the schema path (this is where the validation failed)
+            schema_path = " -> ".join(str(p) for p in error.schema_path)
+            # Format the instance path (this is where the error occurred in the instance)
+            instance_path = " -> ".join(str(p) for p in error.path)
+            
+            # Create a detailed error message
+            error_message = (
+                f"Failed validating '{error.validator}' in schema path: {schema_path}\n"
+                f"On instance path: {instance_path}\n"
+                f"Schema: {error.schema}\n"
+                f"Instance: {error.instance}\n"
+                f"Message: {error.message}"
+            )
+            error_messages.append(error_message)
+
+        # Raise a ValidationError with all error messages
+        raise ValidationError("\n\n".join(error_messages))
+    else:
+        print("Instance is valid.")
 
 
 @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
@@ -582,7 +687,7 @@ def est_coverage_collection_eachVariableProperty(url):
     for property in instance['properties']:
         a=url.replace('/schema?f=json', f'/coverage?f=json&properties={property}')
 
-        est_coverage_collection_coverageResponse(a)
+        test_coverage_collection_coverageResponse(a)
 
 
 def est_coverage_collection_extents(url):
@@ -620,23 +725,7 @@ def est_coverage_collection_extents(url):
         est_coverage_collection_coverageResponse(a)
 
 
-# def est_all_coverages(url):
-#     #test with this url:  https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json
-
-#     response = requests.get(url, verify="/etc/ssl/certs")
-
-#     instance = response.json()
-
-#     assert response.status_code == 200
-
-#     # print(json.dumps(instance, indent=4))
-#     # print(instance['collections'][0]['title'])
-
-#     for collection in instance['collections']:
-#         if 'itemType' not in collection:
-#             print(collection['id'])
-
-
+@pytest.mark.parametrize("url", processUrlList)
 def est_process_collection(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill?f=json
@@ -646,8 +735,6 @@ def est_process_collection(url):
     instance = response.json()
 
     assert response.status_code == 200
-
-    print(instance)
 
     # Define the base directory
     base_dir = os.path.abspath('tests/test-files/schemasProc')
@@ -675,8 +762,8 @@ def est_process_collection(url):
     validator = Draft202012Validator(schema_a, registry=registry)
     validator.validate(instance)
 
-
-def test_process_collection_execute(url):
+@pytest.mark.parametrize("url", processExecutionUrlList)
+def est_process_collection_execute(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill/execution
 
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill/execution'
@@ -694,12 +781,16 @@ def test_process_collection_execute(url):
     # Sending a POST request with the data
     response = requests.post(url, json=data, verify="/etc/ssl/certs")
 
+    assert response.status_code == 200
     # Checking the response status code
-    print(f"Status Code: {response.status_code}")
+    # print(f"Status Code: {response.status_code}")
 
-    # Printing the response content (usually JSON or HTML)
-    print(f"Response Content: {response.text}")
+    # # Printing the response content (usually JSON or HTML)
+    # print(f"Response Content: {response.text}")
 
+    # # print(f"Response json: {response.json()}")
+
+    # print(f"Response Content-Type: {response.headers.get('Content-Type')}")
 
 
 
