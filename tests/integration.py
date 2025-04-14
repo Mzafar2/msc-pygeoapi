@@ -597,13 +597,13 @@ def est_coverage_collection_schema(url):
     validator = Draft202012Validator(schema_a, registry=registry)
     validator.validate(instance)
 
-# @pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
-def test_coverage_collection_coverageResponse(url):
+@pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
+def est_coverage_collection_coverageResponse(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json
     # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
     # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
-
-    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cmip5:projected:annual:anomaly/coverage?f=json'
+    #  if nthis here u good 
+    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cmip5:projected:annual:anomaly/coverage?f=json'
     response = requests.get(url, verify="/etc/ssl/certs")
 
     instance = response.json()
@@ -634,44 +634,44 @@ def test_coverage_collection_coverageResponse(url):
 
 
     # Collect all errors
-    # errors = list(validator.iter_errors(instance))
-
-    # if errors:
-    #     # Build a detailed error message
-    #     error_messages = [f"Validation error: {error.message} at {list(error.path)}" for error in errors]
-        
-    #     # Raise a ValidationError with all error messages
-    #     raise ValidationError(" | ".join(error_messages))
-    # else:
-    #     print("Instance is valid.")
-
-
-    # Collect all errors
     errors = list(validator.iter_errors(instance))
 
     if errors:
-        # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.path)
-            
-            # Create a detailed error message
-            error_message = (
-                f"Failed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
-
+        # Build a detailed error message
+        error_messages = [f"\nValidation error:\n {error.message} at {list(error.path)}\n" for error in errors]
+        
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError(" | ".join(error_messages))
     else:
         print("Instance is valid.")
+
+
+    # Collect all errors
+    # errors = list(validator.iter_errors(instance))
+
+    # if errors:
+    #     # Build a detailed error message that includes schema and instance paths
+    #     error_messages = []
+    #     for error in errors:
+    #         # Format the schema path (this is where the validation failed)
+    #         schema_path = " -> ".join(str(p) for p in error.schema_path)
+    #         # Format the instance path (this is where the error occurred in the instance)
+    #         instance_path = " -> ".join(str(p) for p in error.path)
+            
+    #         # Create a detailed error message
+    #         error_message = (
+    #             f"Failed validating '{error.validator}' in schema path: {schema_path}\n"
+    #             f"On instance path: {instance_path}\n"
+    #             f"Schema: {error.schema}\n"
+    #             f"Instance: {error.instance}\n"
+    #             f"Message: {error.message}"
+    #         )
+    #         error_messages.append(error_message)
+
+    #     # Raise a ValidationError with all error messages
+    #     raise ValidationError("\n\n".join(error_messages))
+    # else:
+    #     print("Instance is valid.")
 
 
 @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
@@ -687,42 +687,59 @@ def est_coverage_collection_eachVariableProperty(url):
     for property in instance['properties']:
         a=url.replace('/schema?f=json', f'/coverage?f=json&properties={property}')
 
-        test_coverage_collection_coverageResponse(a)
+        est_coverage_collection_coverageResponse(a)
 
-
-def est_coverage_collection_extents(url):
+# WAIT UNTIL NEW EXTENTS COME FOR COVERAGE COLLECTIONS
+@pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
+def test_coverage_collection_extents(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
 
     response = requests.get(url, verify="/etc/ssl/certs")
 
-    instance = response.json()
-
     assert response.status_code == 200
-
-
-    bbox = instance['extent']['spatial']['bbox'][0]
-    bboxString = ",".join(map(str, bbox))
-
-
-    newUrl=url.replace('?f=json', '/schema?f=json')
-
-
-
-    response = requests.get(newUrl, verify="/etc/ssl/certs")
 
     instance = response.json()
 
+    print(instance['id'])
+    for i in instance['extent']:
+        print(i)
+
+        if i == 'spatial':
+            bbox = instance['extent']['spatial']['bbox'][0]
+            bboxString = ",".join(map(str, bbox))
+            newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&bbox={bboxString}')
+            # print(newUrl)
+        
+        elif i == 'period':
+            period = instance['extent']['period']['interval'][0]
+            # print(period)
+            newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset=period("{period}")')
+            # print(newUrl)
+
+        elif i == 'reference_time':
+            reference_time = instance['extent']['reference_time']['interval'][0][0]
+            # print(reference_time)
+            newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset=reference_time("{reference_time}")')
+            print(newUrl)
+
+    # bbox = instance['extent']['spatial']['bbox'][0]
+    # bboxString = ",".join(map(str, bbox))
+    # print('over hereeeee')
+    # print(instance['extent']['spatial']['bbox'][0])
+
+    # newUrl=url.replace('?f=json', '/schema?f=json')
 
 
-    assert response.status_code == 200
-    print('properties')
-    for property in instance['properties']:
-        print(' NEW PROPERTYYYYYYYYYYYYYYYYYYYYYYYYY')
-        print(property)
-        a=newUrl.replace('/schema?f=json', f'/coverage?f=json&properties={property}&bbox={bboxString}')
+
+    # response = requests.get(newUrl, verify="/etc/ssl/certs")
+    # assert response.status_code == 200
+    # instance = response.json()
 
 
-        est_coverage_collection_coverageResponse(a)
+
+    
+
+        # est_coverage_collection_coverageResponse(a)
 
 
 @pytest.mark.parametrize("url", processUrlList)
@@ -783,16 +800,15 @@ def est_process_collection_execute(url):
 
     assert response.status_code == 200
     # Checking the response status code
-    # print(f"Status Code: {response.status_code}")
 
-    # # Printing the response content (usually JSON or HTML)
-    # print(f"Response Content: {response.text}")
+    response_text = response.text.replace('\r\n', '\n')
+    # print(f"Response Content:\n {response_text}")
+    with open('tests/test-files/schemasProc/rasterDrillExecution.txt', 'r') as f:
+        file_content = f.read()  # Read the content of the file into a string
 
-    # # print(f"Response json: {response.json()}")
+    # Read the contents of the file into a string
 
-    # print(f"Response Content-Type: {response.headers.get('Content-Type')}")
-
-
+    assert file_content == response_text
 
 
 # testing some stuff here
