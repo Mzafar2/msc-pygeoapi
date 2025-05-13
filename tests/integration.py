@@ -164,7 +164,7 @@ def helper_coverage_response_validation(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         output['error_info'] = error_info
@@ -413,7 +413,7 @@ def test_feature_collection_root(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Feature Collection Root']['Errors'].append(error_info)
@@ -543,7 +543,7 @@ def test_feature_collection_items(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Feature Collection Items']['Errors'].append(error_info)
@@ -727,7 +727,7 @@ def test_feature_collection_single_item(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Feature Collection Single Item']['Errors'].append(error_info)
@@ -904,7 +904,7 @@ def test_coverage_collection_root(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Coverage Collection Root']['Errors'].append(error_info)
@@ -1042,7 +1042,7 @@ def test_coverage_collection_schema(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Coverage Collection Schema']['Errors'].append(error_info)
@@ -1161,7 +1161,7 @@ def est_coverage_collection_coverageResponse(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Coverage Collection Coverage Response']['Errors'].append(error_info)
@@ -1269,7 +1269,7 @@ def est_coverage_collection_eachVariableProperty(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Coverage Collection Variable Property']['Errors'].append(error_info)
@@ -1327,7 +1327,7 @@ def est_coverage_collection_extents(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Coverage Collection Extents Test']['Errors'].append(error_info)
@@ -1451,7 +1451,7 @@ def est_process_collection(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Process Collection Root']['Errors'].append(error_info)
@@ -1573,7 +1573,7 @@ def est_process_collection_execute(url):
                 'collectionId': collection_id,
                 'url': url,
                 'errorType': 'Status Code Error',
-                'statusCode': f'Status code {response.status_code}'
+                'statusCode': response.status_code
         }
 
         TEST_SUMMARY['Test Process Collection Execute']['Errors'].append(error_info)
