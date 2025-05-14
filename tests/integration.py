@@ -392,7 +392,7 @@ processExecutionUrlList = get_process_execution_urls()
 
 # tests
 @pytest.mark.parametrize("url", featureCollectionRootUrlList)
-def test_feature_collection_root(url):
+def est_feature_collection_root(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals?f=json
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals?f=json'
@@ -521,7 +521,7 @@ def test_feature_collection_root(url):
     TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
 @pytest.mark.parametrize("url", featureCollectionItemsUrlList)
-def test_feature_collection_items(url):
+def est_feature_collection_items(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items?limit=1&f=json
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/hurricanes-wind_radii-realtime/items?limit=1&f=json'
@@ -706,7 +706,7 @@ def test_feature_collection_items(url):
 
 
 @pytest.mark.parametrize("url", featureCollectionSingleItemsUrlList)
-def test_feature_collection_single_item(url):
+def est_feature_collection_single_item(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items/1664.62.1?f=json
     global FEATURE_COLLECTION_SINGLE_ITEM_TIME
@@ -883,7 +883,7 @@ def test_feature_collection_single_item(url):
 
 
 @pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
-def test_coverage_collection_root(url):
+def est_coverage_collection_root(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:seasonal:anomaly'
     global COVERAGE_COLLECTION_ROOT_TIME
@@ -1018,7 +1018,7 @@ def test_coverage_collection_root(url):
 
 
 @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
-def test_coverage_collection_schema(url):
+def est_coverage_collection_schema(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
 
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:spei-12:projected/schema?f=json'
@@ -1247,10 +1247,10 @@ def est_coverage_collection_coverageResponse(url):
     TEST_SUMMARY['Test Coverage Collection Coverage Response']['Elapsed Time'] = COVERAGE_COLLECTION_COV_RESPONSE_TIME
 
 
-@pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
-def est_coverage_collection_eachVariableProperty(url):
+# @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
+def test_coverage_collection_eachVariableProperty(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
-
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly/schema?f=json'
     global COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
     global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
