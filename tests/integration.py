@@ -55,6 +55,7 @@ FEATURE_COLLECTION_SINGLE_ITEM_TIME = 0
 FEATURE_COLLECTION_ITEMS_TIME = 0
 FEATURE_COLLECTION_ROOT_TIME = 0
 COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME = 0
+COVERAGE_COLLECTION_EXTENTS_TIME = 0
 PROCESS_COLLECTION_ROOT_TIME = 0
 PROCESS_COLLECTION_EXECUTE_TIME = 0
 
@@ -87,6 +88,10 @@ TEST_SUMMARY = {
         "Elapsed Time": 0,
         "Errors": []
     },
+    "Test Coverage Collection Extents": {
+        "Elapsed Time": 0,
+        "Errors": []
+    },
     "Test Process Collection Root": {
         "Elapsed Time": 0,
         "Errors": []
@@ -114,32 +119,6 @@ def run_before_and_after_tests():
     with open("tests/test-files/test_summary.json", "w") as f:
         json.dump(TEST_SUMMARY, f, indent=4)
 
-# def preprocess_none_to_null(data):
-#     """
-#     Recursively process a dictionary or list and replace Python's None values with 'null' (as a string).
-#     """
-#     if isinstance(data, dict):  # Check if it's a dictionary
-#         return {key: preprocess_none_to_null(value) for key, value in data.items()}
-#     elif isinstance(data, list):  # If it's a list
-#         return [preprocess_none_to_null(item) for item in data]
-#     elif data is None:  # If the value is None, replace it with 'null'
-#         return 'null'
-#     else:
-#         return data  # Return the value as-is if it's not None, list, or dict
-
-# def error_bypass(instance, validator):
-#     # Perform validation and collect all errors
-#     validation_errors = []
-#     for e in validator.iter_errors(instance):
-#         validation_errors.append(str(e))
-
-#     if validation_errors:
-#         # Print all errors
-#         print("Validation Errors:")
-#         for error in validation_errors:
-#             print(error)
-#     else:
-#         print("No validation errors found.")
 
 
 #  Setup helper functions below
@@ -521,7 +500,7 @@ def est_feature_collection_root(url):
     TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
 @pytest.mark.parametrize("url", featureCollectionItemsUrlList)
-def est_feature_collection_items(url):
+def test_feature_collection_items(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items?limit=1&f=json
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/hurricanes-wind_radii-realtime/items?limit=1&f=json'
@@ -883,7 +862,7 @@ def est_feature_collection_single_item(url):
 
 
 @pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
-def est_coverage_collection_root(url):
+def test_coverage_collection_root(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:seasonal:anomaly'
     global COVERAGE_COLLECTION_ROOT_TIME
@@ -1018,7 +997,7 @@ def est_coverage_collection_root(url):
 
 
 @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
-def est_coverage_collection_schema(url):
+def test_coverage_collection_schema(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
 
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:spei-12:projected/schema?f=json'
@@ -1134,13 +1113,15 @@ def est_coverage_collection_schema(url):
     TEST_SUMMARY['Test Coverage Collection Schema']['Elapsed Time'] = COVERAGE_COLLECTION_SCHEMA_TIME
 
 
-@pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
+# @pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
+@pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly/coverage?f=json'])
 def est_coverage_collection_coverageResponse(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json
     # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
     # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
     #  if nthis here u good 
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:anomaly/coverage?f=json'
+    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json&bbox=-150,41,-52,83.5'
 
     global COVERAGE_COLLECTION_COV_RESPONSE_TIME
     global TEST_SUMMARY
@@ -1150,7 +1131,7 @@ def est_coverage_collection_coverageResponse(url):
 
     response = requests.get(url, verify="/etc/ssl/certs")
 
-    instance = response.json()
+    # instance = response.json()
 
     # assert response.status_code == 200
 
@@ -1173,6 +1154,7 @@ def est_coverage_collection_coverageResponse(url):
 
         raise
 
+    instance = response.json()
     # Define the base directory
     base_dir = os.path.abspath('tests/test-files/schemasCov')
 
@@ -1248,7 +1230,7 @@ def est_coverage_collection_coverageResponse(url):
 
 
 # @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
-def test_coverage_collection_eachVariableProperty(url):
+def est_coverage_collection_eachVariableProperty(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly/schema?f=json'
     global COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
@@ -1283,10 +1265,12 @@ def test_coverage_collection_eachVariableProperty(url):
 
     for property in instance['properties']:
         a=url.replace('/schema?f=json', f'/coverage?f=json&properties={property}')
-
+        a = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json&bbox=-150,41,-52,83.5'
+        est_coverage_collection_coverageResponse(a)
+        """
         output = helper_coverage_response_validation(a)
 
-        if output['error_info'] and output['messages']:
+        if output['error_info'] and output['error_messages']:
 
             TEST_SUMMARY['Test Coverage Collection Variable Property']['Errors'].append(output['error_info'])
 
@@ -1296,21 +1280,22 @@ def test_coverage_collection_eachVariableProperty(url):
             TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
 
             # Raise a ValidationError with all error messages
-            raise ValidationError("\n\n".join(output['messages']))
+            raise ValidationError("\n\n".join(output['error_messages']))
 
         else:
             end_time = time.time()  # Capture end time after the test has run
             elapsed_time = end_time - start_time
             COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
             TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
-
+        """
         # est_coverage_collection_coverageResponse(a)
 
 # WAIT UNTIL NEW EXTENTS COME FOR COVERAGE COLLECTIONS
 # @pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
 def est_coverage_collection_extents(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
-    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json'
+    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json'
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly?f=json'
     global COVERAGE_COLLECTION_EXTENTS_TIME
     global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
@@ -1330,12 +1315,12 @@ def est_coverage_collection_extents(url):
                 'statusCode': response.status_code
         }
 
-        TEST_SUMMARY['Coverage Collection Extents Test']['Errors'].append(error_info)
+        TEST_SUMMARY['Test Coverage Collection Extents']['Errors'].append(error_info)
 
         end_time = time.time()  # Capture end time after the test has run
         elapsed_time = end_time - start_time
         COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
-        TEST_SUMMARY['Coverage Collection Extents Test']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
+        TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
 
         raise
 
@@ -1350,7 +1335,6 @@ def est_coverage_collection_extents(url):
             bboxString = ",".join(map(str, bbox))
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&bbox={bboxString}')
             # print(newUrl)
-        
         elif i == 'period':
             period = instance['extent']['period']['interval'][0]
             # print(period)
@@ -1397,23 +1381,23 @@ def est_coverage_collection_extents(url):
 
         output = helper_coverage_response_validation(newUrl)
 
-        if output['error_info'] and output['messages']:
+        if output['error_info'] and output['error_messages']:
 
-            TEST_SUMMARY['Coverage Collection Extents Test']['Errors'].append(output['error_info'])
+            TEST_SUMMARY['Test Coverage Collection Extents']['Errors'].append(output['error_info'])
 
             end_time = time.time()  # Capture end time after the test has run
             elapsed_time = end_time - start_time
             COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
-            TEST_SUMMARY['Coverage Collection Extents Test']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
+            TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
 
             # Raise a ValidationError with all error messages
-            raise ValidationError("\n\n".join(output['messages']))
+            raise ValidationError("\n\n".join(output['error_messages']))
 
         else:
             end_time = time.time()  # Capture end time after the test has run
             elapsed_time = end_time - start_time
             COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
-            TEST_SUMMARY['Coverage Collection Extents Test']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
+            TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
     # bbox = instance['extent']['spatial']['bbox'][0]
     # bboxString = ",".join(map(str, bbox))
     # print('over hereeeee')
@@ -1586,11 +1570,10 @@ def est_process_collection_execute(url):
         raise
 
     response_text = response.text.replace('\r\n', '\n')
-    # print(f"Response Content:\n {response_text}")
 
     if collection_id == 'raster-drill':
         with open('tests/test-files/schemasProc/rasterDrillExecution.txt', 'r') as f:
-            file_content = f.read()  # Read the content of the file into a string
+            file_content = f.read()
 
     # Read the contents of the file into a string
     try:
