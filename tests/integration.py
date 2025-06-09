@@ -123,18 +123,18 @@ def run_before_and_after_tests():
 
 #  Setup helper functions below
 
-def helper_coverage_response_validation(url):
+def helper_coverage_response_validation(url, keyName, timeName, startTime):
 
-    print(f'here is the url ok: {url}')
-
-    output = {'error_messages': None, 'error_info': None}
-
+    global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
+
+    # start_time = time.time()  # Capture start time
 
     response = requests.get(url, verify="/etc/ssl/certs")
 
     # instance = response.json()
 
+    # assert response.status_code == 200
 
     try:
         assert response.status_code == 200
@@ -146,10 +146,16 @@ def helper_coverage_response_validation(url):
                 'statusCode': response.status_code
         }
 
-        output['error_info'] = error_info
+        TEST_SUMMARY[keyName]['Errors'].append(error_info)
+
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - startTime
+        timeName += elapsed_time
+        TEST_SUMMARY[keyName]['Elapsed Time'] = timeName
+
+        raise
 
     instance = response.json()
-
     # Define the base directory
     base_dir = os.path.abspath('tests/test-files/schemasCov')
 
@@ -169,8 +175,39 @@ def helper_coverage_response_validation(url):
 
     validator = Draft202012Validator(schema_a, registry=registry)
 
+    # validator.validate(instance)
+
     # Collect all errors
     errors = list(validator.iter_errors(instance))
+
+    output = helper_validation_error_message(errors, url, collection_id)
+
+    if output['error_messages'] and output['error_info']:
+
+        TEST_SUMMARY[keyName]['Errors'] += output['error_info']
+
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - startTime
+        timeName += elapsed_time
+        TEST_SUMMARY[keyName]['Elapsed Time'] = timeName
+
+
+        # Raise a ValidationError with all error messages
+        raise ValidationError("\n\n".join(output['error_messages']))
+    else:
+        print("Instance is valid.")
+
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - startTime
+        timeName += elapsed_time
+        TEST_SUMMARY[keyName]['Elapsed Time'] = timeName
+
+
+def helper_validation_error_message(errors, url, collectionId):
+    # Collect all errors
+    # errors = list(validator.iter_errors(instance))
+
+    output = {'error_messages': [], 'error_info': []}
 
     if errors:
         # Build a detailed error message that includes schema and instance paths
@@ -191,22 +228,38 @@ def helper_coverage_response_validation(url):
                 f"Message: {error.message}"
             )
             error_messages.append(error_message)
+            output['error_messages'].append(error_message)
 
-            output['error_messages'] = error_messages
             # Fill test summary dict
 
             error_info = {
-                'collectionId': collection_id,
+                'collectionId': collectionId,
                 'url': url,
                 'errorType': 'Validation Error',
                 'failedSchemaItem': schema_path,
                 'failedInstanceItem': instance_path,
                 'errorMessage': error.message
             }
-
-            output['error_info'] = error_info
+            output['error_info'].append(error_info)
 
     return output
+
+    #         TEST_SUMMARY['Test Feature Collection Root']['Errors'].append(error_info)
+
+    #     end_time = time.time()  # Capture end time after the test has run
+    #     elapsed_time = end_time - start_time
+    #     FEATURE_COLLECTION_ROOT_TIME += elapsed_time
+    #     TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
+
+    #     # Raise a ValidationError with all error messages
+    #     raise ValidationError("\n\n".join(error_messages))
+    # else:
+    #     print("Instance is valid.")
+
+    # end_time = time.time()  # Capture end time after the test has run
+    # elapsed_time = end_time - start_time
+    # FEATURE_COLLECTION_ROOT_TIME += elapsed_time
+    # TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
 
 def get_feature_collection_root_urls():
@@ -451,38 +504,42 @@ def est_feature_collection_root(url):
     # Collect all errors
     errors = list(validator.iter_errors(instance))
 
-    if errors:
-        # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.absolute_path)
+    output = helper_validation_error_message(errors, url, collection_id)
+
+    if output['error_messages'] and output['error_info']:
+
+    # if errors:
+    #     # Build a detailed error message that includes schema and instance paths
+    #     error_messages = []
+    #     for error in errors:
+    #         # Format the schema path (this is where the validation failed)
+    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
+    #         # Format the instance path (this is where the error occurred in the instance)
+    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
 
 
-            #  detailed error message
-            error_message = (
-                f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
+    #         #  detailed error message
+    #         error_message = (
+    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
+    #             f"On instance path: {instance_path}\n"
+    #             f"Schema: {error.schema}\n"
+    #             f"Instance: {error.instance}\n"
+    #             f"Message: {error.message}"
+    #         )
+    #         error_messages.append(error_message)
 
-            # Fill test summary dict
+    #         # Fill test summary dict
 
-            error_info = {
-                'collectionId': collection_id,
-                'url': url,
-                'errorType': 'Validation Error',
-                'failedSchemaItem': schema_path,
-                'failedInstanceItem': instance_path,
-                'errorMessage': error.message
-            }
+    #         error_info = {
+    #             'collectionId': collection_id,
+    #             'url': url,
+    #             'errorType': 'Validation Error',
+    #             'failedSchemaItem': schema_path,
+    #             'failedInstanceItem': instance_path,
+    #             'errorMessage': error.message
+    #         }
 
-            TEST_SUMMARY['Test Feature Collection Root']['Errors'].append(error_info)
+        TEST_SUMMARY['Test Feature Collection Root']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
         elapsed_time = end_time - start_time
@@ -490,17 +547,17 @@ def est_feature_collection_root(url):
         TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError("\n\n".join(output['error_messages']))
     else:
         print("Instance is valid.")
 
-    end_time = time.time()  # Capture end time after the test has run
-    elapsed_time = end_time - start_time
-    FEATURE_COLLECTION_ROOT_TIME += elapsed_time
-    TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        FEATURE_COLLECTION_ROOT_TIME += elapsed_time
+        TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
 @pytest.mark.parametrize("url", featureCollectionItemsUrlList)
-def test_feature_collection_items(url):
+def est_feature_collection_items(url):
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items?limit=1&f=json
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/hurricanes-wind_radii-realtime/items?limit=1&f=json'
@@ -635,38 +692,41 @@ def test_feature_collection_items(url):
     # Collect all errors
     errors = list(validator.iter_errors(instance))
 
-    if errors:
-        # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.absolute_path)
+    output = helper_validation_error_message(errors, url, collection_id)
+
+    if output['error_messages'] and output['error_info']:
+    # if errors:
+    #     # Build a detailed error message that includes schema and instance paths
+    #     error_messages = []
+    #     for error in errors:
+    #         # Format the schema path (this is where the validation failed)
+    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
+    #         # Format the instance path (this is where the error occurred in the instance)
+    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
 
 
-            #  detailed error message
-            error_message = (
-                f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
+    #         #  detailed error message
+    #         error_message = (
+    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
+    #             f"On instance path: {instance_path}\n"
+    #             f"Schema: {error.schema}\n"
+    #             f"Instance: {error.instance}\n"
+    #             f"Message: {error.message}"
+    #         )
+    #         error_messages.append(error_message)
 
-            # Fill test summary dict
+    #         # Fill test summary dict
 
-            error_info = {
-                'collectionId': collection_id,
-                'url': url,
-                'errorType': 'Validation Error',
-                'failedSchemaItem': schema_path,
-                'failedInstanceItem': instance_path,
-                'errorMessage': error.message
-            }
+    #         error_info = {
+    #             'collectionId': collection_id,
+    #             'url': url,
+    #             'errorType': 'Validation Error',
+    #             'failedSchemaItem': schema_path,
+    #             'failedInstanceItem': instance_path,
+    #             'errorMessage': error.message
+    #         }
 
-            TEST_SUMMARY['Test Feature Collection Items']['Errors'].append(error_info)
+        TEST_SUMMARY['Test Feature Collection Items']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
         elapsed_time = end_time - start_time
@@ -674,14 +734,14 @@ def test_feature_collection_items(url):
         TEST_SUMMARY['Test Feature Collection Items']['Elapsed Time'] = FEATURE_COLLECTION_ITEMS_TIME
 
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError("\n\n".join(output['error_messages']))
     else:
         print("Instance is valid.")
 
-    end_time = time.time()  # Capture end time after the test has run
-    elapsed_time = end_time - start_time
-    FEATURE_COLLECTION_ITEMS_TIME += elapsed_time
-    TEST_SUMMARY['Test Feature Collection Items']['Elapsed Time'] = FEATURE_COLLECTION_ITEMS_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        FEATURE_COLLECTION_ITEMS_TIME += elapsed_time
+        TEST_SUMMARY['Test Feature Collection Items']['Elapsed Time'] = FEATURE_COLLECTION_ITEMS_TIME
 
 
 @pytest.mark.parametrize("url", featureCollectionSingleItemsUrlList)
@@ -812,38 +872,42 @@ def est_feature_collection_single_item(url):
     # Collect all errors
     errors = list(validator.iter_errors(instance))
 
-    if errors:
-        # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.absolute_path)
+    output = helper_validation_error_message(errors, url, collection_id)
+
+    if output['error_messages'] and output['error_info']:
+
+    # if errors:
+    #     # Build a detailed error message that includes schema and instance paths
+    #     error_messages = []
+    #     for error in errors:
+    #         # Format the schema path (this is where the validation failed)
+    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
+    #         # Format the instance path (this is where the error occurred in the instance)
+    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
 
 
-            #  detailed error message
-            error_message = (
-                f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
+    #         #  detailed error message
+    #         error_message = (
+    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
+    #             f"On instance path: {instance_path}\n"
+    #             f"Schema: {error.schema}\n"
+    #             f"Instance: {error.instance}\n"
+    #             f"Message: {error.message}"
+    #         )
+    #         error_messages.append(error_message)
 
-            # Fill test summary dict
+    #         # Fill test summary dict
 
-            error_info = {
-                'collectionId': collection_id,
-                'url': url,
-                'errorType': 'Validation Error',
-                'failedSchemaItem': schema_path,
-                'failedInstanceItem': instance_path,
-                'errorMessage': error.message
-            }
+    #         error_info = {
+    #             'collectionId': collection_id,
+    #             'url': url,
+    #             'errorType': 'Validation Error',
+    #             'failedSchemaItem': schema_path,
+    #             'failedInstanceItem': instance_path,
+    #             'errorMessage': error.message
+    #         }
 
-            TEST_SUMMARY['Test Feature Collection Single Item']['Errors'].append(error_info)
+        TEST_SUMMARY['Test Feature Collection Single Item']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
         elapsed_time = end_time - start_time
@@ -851,18 +915,18 @@ def est_feature_collection_single_item(url):
         TEST_SUMMARY['Test Feature Collection Single Item']['Elapsed Time'] = FEATURE_COLLECTION_SINGLE_ITEM_TIME
 
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError("\n\n".join(output['error_messages']))
     else:
         print("Instance is valid.")
 
-    end_time = time.time()  # Capture end time after the test has run
-    elapsed_time = end_time - start_time
-    FEATURE_COLLECTION_SINGLE_ITEM_TIME += elapsed_time
-    TEST_SUMMARY['Test Feature Collection Single Item']['Elapsed Time'] = FEATURE_COLLECTION_SINGLE_ITEM_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        FEATURE_COLLECTION_SINGLE_ITEM_TIME += elapsed_time
+        TEST_SUMMARY['Test Feature Collection Single Item']['Elapsed Time'] = FEATURE_COLLECTION_SINGLE_ITEM_TIME
 
 
 @pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
-def test_coverage_collection_root(url):
+def est_coverage_collection_root(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:seasonal:anomaly'
     global COVERAGE_COLLECTION_ROOT_TIME
@@ -946,58 +1010,60 @@ def test_coverage_collection_root(url):
     # Collect all errors
     errors = list(validator.iter_errors(instance))
 
-    if errors:
+    output = helper_validation_error_message(errors, url, collection_id)
+
+    if output['error_messages'] and output['error_info']:
         # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.absolute_path)
+        # error_messages = []
+        # for error in errors:
+        #     # Format the schema path (this is where the validation failed)
+        #     schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
+        #     # Format the instance path (this is where the error occurred in the instance)
+        #     instance_path = " -> ".join(str(p) for p in error.absolute_path)
 
 
             #  detailed error message
-            error_message = (
-                f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
+            # error_message = (
+            #     f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
+            #     f"On instance path: {instance_path}\n"
+            #     f"Schema: {error.schema}\n"
+            #     f"Instance: {error.instance}\n"
+            #     f"Message: {error.message}"
+            # )
+            # error_messages.append(error_message)
 
             # Fill test summary dict
 
-            error_info = {
-                'collectionId': collection_id,
-                'url': url,
-                'errorType': 'Validation Error',
-                'failedSchemaItem': schema_path,
-                'failedInstanceItem': instance_path,
-                'errorMessage': error.message
-            }
+            # error_info = {
+            #     'collectionId': collection_id,
+            #     'url': url,
+            #     'errorType': 'Validation Error',
+            #     'failedSchemaItem': schema_path,
+            #     'failedInstanceItem': instance_path,
+            #     'errorMessage': error.message
+            # }
 
-            TEST_SUMMARY['Test Coverage Collection Root']['Errors'].append(error_info)
+        TEST_SUMMARY['Test Coverage Collection Root']['Errors'] += output['error_info']
 
-            end_time = time.time()  # Capture end time after the test has run
-            elapsed_time = end_time - start_time
-            COVERAGE_COLLECTION_ROOT_TIME += elapsed_time
-            TEST_SUMMARY['Test Coverage Collection Root']['Elapsed Time'] = COVERAGE_COLLECTION_ROOT_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_ROOT_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Root']['Elapsed Time'] = COVERAGE_COLLECTION_ROOT_TIME
 
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError("\n\n".join(output['error_messages']))
     else:
         print("Instance is valid.")
 
-    end_time = time.time()  # Capture end time after the test has run
-    elapsed_time = end_time - start_time
-    COVERAGE_COLLECTION_ROOT_TIME += elapsed_time
-    TEST_SUMMARY['Test Coverage Collection Root']['Elapsed Time'] = COVERAGE_COLLECTION_ROOT_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_ROOT_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Root']['Elapsed Time'] = COVERAGE_COLLECTION_ROOT_TIME
 
 
 
 @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
-def test_coverage_collection_schema(url):
+def est_coverage_collection_schema(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
 
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:spei-12:projected/schema?f=json'
@@ -1054,48 +1120,17 @@ def test_coverage_collection_schema(url):
     # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
     registry = registry.crawl()
 
-    # instance = preprocess_none_to_null(instance)
-
 
     validator = Draft202012Validator(schema_a, registry=registry)
-    # validator.validate(instance)
 
     # Collect all errors
     errors = list(validator.iter_errors(instance))
 
-    if errors:
-        # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.absolute_path)
+    output = helper_validation_error_message(errors, url, collection_id)
 
+    if output['error_messages'] and output['error_info']:
 
-            #  detailed error message
-            error_message = (
-                f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
-
-            # Fill test summary dict
-
-            error_info = {
-                'collectionId': collection_id,
-                'url': url,
-                'errorType': 'Validation Error',
-                'failedSchemaItem': schema_path,
-                'failedInstanceItem': instance_path,
-                'errorMessage': error.message
-            }
-
-            TEST_SUMMARY['Test Coverage Collection Schema']['Errors'].append(error_info)
-
+        TEST_SUMMARY['Test Coverage Collection Schema']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
         elapsed_time = end_time - start_time
@@ -1103,18 +1138,18 @@ def test_coverage_collection_schema(url):
         TEST_SUMMARY['Test Coverage Collection Schema']['Elapsed Time'] = COVERAGE_COLLECTION_SCHEMA_TIME
 
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError("\n\n".join(output['error_messages']))
     else:
         print("Instance is valid.")
 
-    end_time = time.time()  # Capture end time after the test has run
-    elapsed_time = end_time - start_time
-    COVERAGE_COLLECTION_SCHEMA_TIME += elapsed_time
-    TEST_SUMMARY['Test Coverage Collection Schema']['Elapsed Time'] = COVERAGE_COLLECTION_SCHEMA_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_SCHEMA_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Schema']['Elapsed Time'] = COVERAGE_COLLECTION_SCHEMA_TIME
 
 
 # @pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
-@pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly/coverage?f=json'])
+@pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p/coverage?f=json'])
 def est_coverage_collection_coverageResponse(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json
     # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
@@ -1179,38 +1214,41 @@ def est_coverage_collection_coverageResponse(url):
     # Collect all errors
     errors = list(validator.iter_errors(instance))
 
-    if errors:
-        # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.absolute_path)
+    output = helper_validation_error_message(errors, url, collection_id)
+
+    if output['error_messages'] and output['error_info']:
+    # if errors:
+    #     # Build a detailed error message that includes schema and instance paths
+    #     error_messages = []
+    #     for error in errors:
+    #         # Format the schema path (this is where the validation failed)
+    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
+    #         # Format the instance path (this is where the error occurred in the instance)
+    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
 
 
-            #  detailed error message
-            error_message = (
-                f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
+    #         #  detailed error message
+    #         error_message = (
+    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
+    #             f"On instance path: {instance_path}\n"
+    #             f"Schema: {error.schema}\n"
+    #             f"Instance: {error.instance}\n"
+    #             f"Message: {error.message}"
+    #         )
+    #         error_messages.append(error_message)
 
-            # Fill test summary dict
+    #         # Fill test summary dict
 
-            error_info = {
-                'collectionId': collection_id,
-                'url': url,
-                'errorType': 'Validation Error',
-                'failedSchemaItem': schema_path,
-                'failedInstanceItem': instance_path,
-                'errorMessage': error.message
-            }
+    #         error_info = {
+    #             'collectionId': collection_id,
+    #             'url': url,
+    #             'errorType': 'Validation Error',
+    #             'failedSchemaItem': schema_path,
+    #             'failedInstanceItem': instance_path,
+    #             'errorMessage': error.message
+    #         }
 
-            TEST_SUMMARY['Test Coverage Collection Coverage Response']['Errors'].append(error_info)
+        TEST_SUMMARY['Test Coverage Collection Coverage Response']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
         elapsed_time = end_time - start_time
@@ -1219,20 +1257,21 @@ def est_coverage_collection_coverageResponse(url):
 
 
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError("\n\n".join(output['error_messages']))
     else:
         print("Instance is valid.")
 
-    end_time = time.time()  # Capture end time after the test has run
-    elapsed_time = end_time - start_time
-    COVERAGE_COLLECTION_COV_RESPONSE_TIME += elapsed_time
-    TEST_SUMMARY['Test Coverage Collection Coverage Response']['Elapsed Time'] = COVERAGE_COLLECTION_COV_RESPONSE_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_COV_RESPONSE_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Coverage Response']['Elapsed Time'] = COVERAGE_COLLECTION_COV_RESPONSE_TIME
 
 
 # @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
-def est_coverage_collection_eachVariableProperty(url):
+@pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p/schema?f=json'])
+def test_coverage_collection_eachVariableProperty(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
-    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly/schema?f=json'
+    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly/schema?f=json'
     global COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
     global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
@@ -1265,39 +1304,41 @@ def est_coverage_collection_eachVariableProperty(url):
 
     for property in instance['properties']:
         a=url.replace('/schema?f=json', f'/coverage?f=json&properties={property}')
-        a = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json&bbox=-150,41,-52,83.5'
-        est_coverage_collection_coverageResponse(a)
-        """
-        output = helper_coverage_response_validation(a)
 
-        if output['error_info'] and output['error_messages']:
+        helper_coverage_response_validation(a, 'Test Coverage Collection Variable Property', COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME, start_time)
 
-            TEST_SUMMARY['Test Coverage Collection Variable Property']['Errors'].append(output['error_info'])
+        # output = helper_validation_error_message()
 
-            end_time = time.time()  # Capture end time after the test has run
-            elapsed_time = end_time - start_time
-            COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
-            TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
+        # if output['error_info'] and output['error_messages']:
 
-            # Raise a ValidationError with all error messages
-            raise ValidationError("\n\n".join(output['error_messages']))
+        #     TEST_SUMMARY['Test Coverage Collection Variable Property']['Errors'] += output['error_info']
 
-        else:
-            end_time = time.time()  # Capture end time after the test has run
-            elapsed_time = end_time - start_time
-            COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
-            TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
-        """
+        #     end_time = time.time()  # Capture end time after the test has run
+        #     elapsed_time = end_time - start_time
+        #     COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
+        #     TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
+
+        #     # Raise a ValidationError with all error messages
+        #     raise ValidationError("\n\n".join(output['error_messages']))
+
+        # else:
+        #     end_time = time.time()  # Capture end time after the test has run
+        #     elapsed_time = end_time - start_time
+        #     COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
+        #     TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
+
         # est_coverage_collection_coverageResponse(a)
 
 # WAIT UNTIL NEW EXTENTS COME FOR COVERAGE COLLECTIONS
 # @pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
-def est_coverage_collection_extents(url):
+@pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p?f=json'])
+def test_coverage_collection_extents(url):
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
     # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json'
-    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly?f=json'
+    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly?f=json'
     global COVERAGE_COLLECTION_EXTENTS_TIME
     global TEST_SUMMARY
+
     collection_id = url.split('/collections/')[1].split('?')[0]
 
     start_time = time.time()  # Capture start time
@@ -1326,7 +1367,7 @@ def est_coverage_collection_extents(url):
 
     instance = response.json()
 
-    print(instance['id'])
+    # print(instance['id'])
     for i in instance['extent']:
         print(i)
 
@@ -1378,26 +1419,28 @@ def est_coverage_collection_extents(url):
             print(newUrl)
             print("Matched pattern")
 
+        helper_coverage_response_validation(newUrl, 'Test Coverage Collection Extents', COVERAGE_COLLECTION_EXTENTS_TIME, start_time)
 
-        output = helper_coverage_response_validation(newUrl)
 
-        if output['error_info'] and output['error_messages']:
+        # output = helper_coverage_response_validation(newUrl)
 
-            TEST_SUMMARY['Test Coverage Collection Extents']['Errors'].append(output['error_info'])
+        # if output['error_info'] and output['error_messages']:
 
-            end_time = time.time()  # Capture end time after the test has run
-            elapsed_time = end_time - start_time
-            COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
-            TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
+        #     TEST_SUMMARY['Test Coverage Collection Extents']['Errors'].append(output['error_info'])
 
-            # Raise a ValidationError with all error messages
-            raise ValidationError("\n\n".join(output['error_messages']))
+        #     end_time = time.time()  # Capture end time after the test has run
+        #     elapsed_time = end_time - start_time
+        #     COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
+        #     TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
 
-        else:
-            end_time = time.time()  # Capture end time after the test has run
-            elapsed_time = end_time - start_time
-            COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
-            TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
+        #     # Raise a ValidationError with all error messages
+        #     raise ValidationError("\n\n".join(output['error_messages']))
+
+        # else:
+        #     end_time = time.time()  # Capture end time after the test has run
+        #     elapsed_time = end_time - start_time
+        #     COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
+        #     TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
     # bbox = instance['extent']['spatial']['bbox'][0]
     # bboxString = ",".join(map(str, bbox))
     # print('over hereeeee')
@@ -1474,38 +1517,42 @@ def est_process_collection(url):
     # validator.validate(instance)
     errors = list(validator.iter_errors(instance))
 
-    if errors:
+    output = helper_validation_error_message(errors, url, collection_id)
+
+    if output['error_messages'] and output['error_info']:
+
+    # if errors:
         # Build a detailed error message that includes schema and instance paths
-        error_messages = []
-        for error in errors:
-            # Format the schema path (this is where the validation failed)
-            schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-            # Format the instance path (this is where the error occurred in the instance)
-            instance_path = " -> ".join(str(p) for p in error.absolute_path)
+        # error_messages = []
+        # for error in errors:
+        #     # Format the schema path (this is where the validation failed)
+        #     schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
+        #     # Format the instance path (this is where the error occurred in the instance)
+        #     instance_path = " -> ".join(str(p) for p in error.absolute_path)
 
 
-            #  detailed error message
-            error_message = (
-                f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-                f"On instance path: {instance_path}\n"
-                f"Schema: {error.schema}\n"
-                f"Instance: {error.instance}\n"
-                f"Message: {error.message}"
-            )
-            error_messages.append(error_message)
+        #     #  detailed error message
+        #     error_message = (
+        #         f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
+        #         f"On instance path: {instance_path}\n"
+        #         f"Schema: {error.schema}\n"
+        #         f"Instance: {error.instance}\n"
+        #         f"Message: {error.message}"
+        #     )
+        #     error_messages.append(error_message)
 
-            # Fill test summary dict
+        #     # Fill test summary dict
 
-            error_info = {
-                'collectionId': collection_id,
-                'url': url,
-                'errorType': 'Validation Error',
-                'failedSchemaItem': schema_path,
-                'failedInstanceItem': instance_path,
-                'errorMessage': error.message
-            }
+        #     error_info = {
+        #         'collectionId': collection_id,
+        #         'url': url,
+        #         'errorType': 'Validation Error',
+        #         'failedSchemaItem': schema_path,
+        #         'failedInstanceItem': instance_path,
+        #         'errorMessage': error.message
+        #     }
 
-            TEST_SUMMARY['Test Process Collection Root']['Errors'].append(error_info)
+        TEST_SUMMARY['Test Process Collection Root']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
         elapsed_time = end_time - start_time
@@ -1513,7 +1560,7 @@ def est_process_collection(url):
         TEST_SUMMARY['Test Process Collection Root']['Elapsed Time'] = PROCESS_COLLECTION_ROOT_TIME
 
         # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(error_messages))
+        raise ValidationError("\n\n".join(output['error_messages']))
     else:
         print("Instance is valid.")
 
