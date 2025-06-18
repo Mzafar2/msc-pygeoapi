@@ -37,17 +37,14 @@ from jsonschema import ValidationError, validate
 from jsonschema import Draft202012Validator
 from jsonschema import exceptions
 from referencing import Registry, Resource, jsonschema
-# from referencing.exceptions import ReferenceResolutionError
+from parse import parse
+from datetime import datetime, date
 import json
 import os
 
-# @pytest.fixture()
-# def url(pytestconfig):
-#     return pytestconfig.getoption('url')
-
-
-# add variables for creating the json test summary
-
+# Variables for storing collection test elapsed time
+NIGHLTY_SERVICE_ONLINE_TIME = 0
+NIGHLTY_DATE_TIME = 0
 COVERAGE_COLLECTION_ROOT_TIME = 0
 COVERAGE_COLLECTION_SCHEMA_TIME = 0
 COVERAGE_COLLECTION_COV_RESPONSE_TIME = 0
@@ -59,7 +56,16 @@ COVERAGE_COLLECTION_EXTENTS_TIME = 0
 PROCESS_COLLECTION_ROOT_TIME = 0
 PROCESS_COLLECTION_EXECUTE_TIME = 0
 
+# Test summary dictionary
 TEST_SUMMARY = {
+    "Test Nightly Service Online": {
+        "Elapsed Time": 0,
+        "Errors": []
+    },
+    "Test Nightly Date": {
+        "Elapsed Time": 0,
+        "Errors": []
+    },
     "Test Feature Collection Single Item": {
         "Elapsed Time": 0,
         "Errors": []
@@ -109,32 +115,35 @@ def run_before_and_after_tests():
 
     yield
 
-
-    # print(f"Here is the total test timeeee sirr {COVERAGE_COLLECTION_ROOT_TIME}")
-    # print(TEST_SUMMARY)
     print(json.dumps(TEST_SUMMARY, indent=4))
 
-
-    # Write it to a JSON file
+    # Write test summary dictionary to a JSON file after all tests are complete
     with open("tests/test-files/test_summary.json", "w") as f:
         json.dump(TEST_SUMMARY, f, indent=4)
 
 
+# Setup helper functions below
 
-#  Setup helper functions below
+# Validate coverage response
+def helper_coverage_response_validation(url):
+    """
+    Validate the CovJSON given by the url and return any errors.
 
-def helper_coverage_response_validation(url, keyName, timeName, startTime):
+    Parameters:
+    url (string): Endpoint to test.
+
+    Returns:
+
+    dict: A dictionary with two keys:
+        - 'error_messages' (list of str): List of formatted error message strings.
+        - 'error_info' (list of dict): List of error details as dictionaries,
+          including 'collectionId', 'url', 'errorType', and 'statusCode'.
+    """
 
     global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
 
-    # start_time = time.time()  # Capture start time
-
     response = requests.get(url, verify="/etc/ssl/certs")
-
-    # instance = response.json()
-
-    # assert response.status_code == 200
 
     try:
         assert response.status_code == 200
@@ -146,16 +155,17 @@ def helper_coverage_response_validation(url, keyName, timeName, startTime):
                 'statusCode': response.status_code
         }
 
-        TEST_SUMMARY[keyName]['Errors'].append(error_info)
+        error_message = (
+                f"\n\ncollectionId: {collection_id}\n"
+                f"url: {url}\n"
+                f"errorType: Status Code Error\n"
+                f"statusCode: {response.status_code}\n"
+            )
 
-        end_time = time.time()  # Capture end time after the test has run
-        elapsed_time = end_time - startTime
-        timeName += elapsed_time
-        TEST_SUMMARY[keyName]['Elapsed Time'] = timeName
-
-        raise
+        return {'error_messages': [error_message], 'error_info': [error_info]}
 
     instance = response.json()
+
     # Define the base directory
     base_dir = os.path.abspath('tests/test-files/schemasCov')
 
@@ -167,7 +177,6 @@ def helper_coverage_response_validation(url, keyName, timeName, startTime):
     # resource for schema a
     resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
 
-
     registry = Registry().with_resources([(f'{base_dir}', resourceA)])
 
     # Register the schema a in the registry as a resource
@@ -175,37 +184,34 @@ def helper_coverage_response_validation(url, keyName, timeName, startTime):
 
     validator = Draft202012Validator(schema_a, registry=registry)
 
-    # validator.validate(instance)
-
     # Collect all errors
     errors = list(validator.iter_errors(instance))
 
     output = helper_validation_error_message(errors, url, collection_id)
 
-    if output['error_messages'] and output['error_info']:
-
-        TEST_SUMMARY[keyName]['Errors'] += output['error_info']
-
-        end_time = time.time()  # Capture end time after the test has run
-        elapsed_time = end_time - startTime
-        timeName += elapsed_time
-        TEST_SUMMARY[keyName]['Elapsed Time'] = timeName
-
-
-        # Raise a ValidationError with all error messages
-        raise ValidationError("\n\n".join(output['error_messages']))
-    else:
-        print("Instance is valid.")
-
-        end_time = time.time()  # Capture end time after the test has run
-        elapsed_time = end_time - startTime
-        timeName += elapsed_time
-        TEST_SUMMARY[keyName]['Elapsed Time'] = timeName
+    return output
 
 
 def helper_validation_error_message(errors, url, collectionId):
-    # Collect all errors
-    # errors = list(validator.iter_errors(instance))
+    """
+    Generate a structured summary of validation errors for a given dataset.
+
+    Parameters:
+    errors (list): A list of validation error objects.
+    url (str): The URL of the resource being validated.
+    collectionId (str): Identifier for the collection the resource belongs to.
+
+    Returns:
+    dict: A dictionary containing:
+        - 'error_messages' (list of str): Human-readable, detailed error messages for logging or reporting.
+        - 'error_info' (list of dict): Structured error metadata with keys:
+            - 'collectionId' (str): The ID of the data collection.
+            - 'url' (str): The URL that was validated.
+            - 'errorType' (str): Type of error (always 'Validation Error').
+            - 'failedSchemaItem' (str): Path in the schema where validation failed.
+            - 'failedInstanceItem' (str): Path in the instance (input) that failed validation.
+            - 'errorMessage' (str): The error message from the validator.
+    """
 
     output = {'error_messages': [], 'error_info': []}
 
@@ -244,25 +250,16 @@ def helper_validation_error_message(errors, url, collectionId):
 
     return output
 
-    #         TEST_SUMMARY['Test Feature Collection Root']['Errors'].append(error_info)
-
-    #     end_time = time.time()  # Capture end time after the test has run
-    #     elapsed_time = end_time - start_time
-    #     FEATURE_COLLECTION_ROOT_TIME += elapsed_time
-    #     TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
-
-    #     # Raise a ValidationError with all error messages
-    #     raise ValidationError("\n\n".join(error_messages))
-    # else:
-    #     print("Instance is valid.")
-
-    # end_time = time.time()  # Capture end time after the test has run
-    # elapsed_time = end_time - start_time
-    # FEATURE_COLLECTION_ROOT_TIME += elapsed_time
-    # TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
 
 def get_feature_collection_root_urls():
+    """
+    Retrieve the root URLs for all feature collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of URLs for feature collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
     urlList = []
 
@@ -281,6 +278,13 @@ def get_feature_collection_root_urls():
 
 
 def get_feature_collection_items_urls():
+    """
+    Retrieve the 'items' URLs for all feature collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of 'items' URLs for coverage collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
     urlList = []
 
@@ -299,6 +303,13 @@ def get_feature_collection_items_urls():
 
 
 def get_feature_collection_single_items_urls():
+    """
+    Retrieve the 'single item' URLs for all feature collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of 'single item' URLs for feature collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
     urlList = []
 
@@ -327,6 +338,13 @@ def get_feature_collection_single_items_urls():
     return urlList
 
 def get_coverage_collection_root_urls():
+    """
+    Retrieve the root URLs for all coverage collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of root URLs for coverage collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
     urlList = []
     response = requests.get(url, verify="/etc/ssl/certs")
@@ -344,6 +362,13 @@ def get_coverage_collection_root_urls():
 
 
 def get_coverage_collection_schema_urls():
+    """
+    Retrieve the 'schema' URLs for all coverage collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of 'schema' URLs for coverage collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
     urlList = []
     response = requests.get(url, verify="/etc/ssl/certs")
@@ -361,6 +386,13 @@ def get_coverage_collection_schema_urls():
 
 
 def get_coverage_collection_coverageData_urls():
+    """
+    Retrieve the 'coverage data' URLs for all coverage collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of 'coverage data' URLs for coverage collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections?f=json'
     urlList = []
     response = requests.get(url, verify="/etc/ssl/certs")
@@ -377,6 +409,13 @@ def get_coverage_collection_coverageData_urls():
     return urlList
 
 def get_process_urls():
+    """
+    Retrieve the 'processes' URLs for all processes collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of 'processes' URLs for processes collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes?f=json'
     urlList = []
     response = requests.get(url, verify="/etc/ssl/certs")
@@ -392,6 +431,13 @@ def get_process_urls():
     return urlList
 
 def get_process_execution_urls():
+    """
+    Retrieve the 'execution' URLs for all processes collections from the GeoMet API.
+
+    Returns:
+    list of str: A list of 'execution' URLs for processes collections.
+    """
+
     url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes?f=json'
     urlList = []
     response = requests.get(url, verify="/etc/ssl/certs")
@@ -407,7 +453,7 @@ def get_process_execution_urls():
     return urlList
 
 
-# Setup url variables for making arguments during the testing below
+# Setup variables storing URL lists to pass as arguments during the testing below
 
 featureCollectionRootUrlList = get_feature_collection_root_urls()
 featureCollectionItemsUrlList = get_feature_collection_items_urls()
@@ -419,15 +465,106 @@ processUrlList = get_process_urls()
 processExecutionUrlList = get_process_execution_urls()
 
 
+# Integration tests begin
 
+def test_nightly_service_online():
+    """
+    Pytest function to test if the nightly is online.
 
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    """
 
-# tests
+    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi'
+
+    global NIGHLTY_SERVICE_ONLINE_TIME
+    global TEST_SUMMARY
+
+    start_time = time.time()  # Capture start time
+
+    response = requests.get(url, verify="/etc/ssl/certs")
+
+    try:
+        assert response.status_code == 200
+    except AssertionError:
+        error_info = {
+                'url': url,
+                'errorType': 'Service Down Error',
+                'statusCode': response.status_code
+        }
+
+        TEST_SUMMARY['Test Nightly Service Online']['Errors'].append(error_info)
+
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        NIGHLTY_SERVICE_ONLINE_TIME += elapsed_time
+        TEST_SUMMARY['Test Nightly Service Online']['Elapsed Time'] = NIGHLTY_SERVICE_ONLINE_TIME
+
+        raise
+
+def test_nightly_date():
+    """
+    Test if latest nightly build matches today's date
+    """
+    global NIGHLTY_DATE_TIME
+    global TEST_SUMMARY
+
+    start_time = time.time()  # Capture start time
+
+    # retrieve name of directory the latest symbolic link is pointing to
+    latest = os.path.basename(
+        os.path.realpath('/data/web/msc-pygeoapi-nightly/latest')
+    )
+
+    # parse date from directory name
+    latest_parsed = parse('msc-pygeoapi-{YYYYMMDD}.{HHMM}', latest)
+    latest_date = datetime.strptime(
+        latest_parsed['YYYYMMDD'],
+        '%Y%m%d'
+    ).date()
+
+    # assert parsed date is equal to today's date
+    try:
+        assert latest_date == date.today()
+    except AssertionError:
+        error_info = {
+                'errorType': 'File Date Mismatch Error',
+                'errorMessage': f"Nightly build date ({latest_date}) does not match today's date ({date.today()})."
+        }
+
+        TEST_SUMMARY['Test Nightly Date']['Errors'].append(error_info)
+
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        NIGHLTY_DATE_TIME += elapsed_time
+        TEST_SUMMARY['Test Nightly Date']['Elapsed Time'] = NIGHLTY_DATE_TIME
+        raise AssertionError(
+            f"Nightly build date ({latest_date}) does not match today's date ({date.today()})."
+        )
+
 @pytest.mark.parametrize("url", featureCollectionRootUrlList)
-def est_feature_collection_root(url):
+def test_feature_collection_root(url):
+    """
+    Pytest function to validate the structure and content of a GeoMet Feature Collection root JSON response.
+
+    This test performs the following for each URL in `featureCollectionRootUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals?f=json
-    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals?f=json'
+    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals?f=json'
     global FEATURE_COLLECTION_ROOT_TIME
     global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
@@ -449,6 +586,11 @@ def est_feature_collection_root(url):
         }
 
         TEST_SUMMARY['Test Feature Collection Root']['Errors'].append(error_info)
+
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        FEATURE_COLLECTION_ROOT_TIME += elapsed_time
+        TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
         raise
 
@@ -508,37 +650,6 @@ def est_feature_collection_root(url):
 
     if output['error_messages'] and output['error_info']:
 
-    # if errors:
-    #     # Build a detailed error message that includes schema and instance paths
-    #     error_messages = []
-    #     for error in errors:
-    #         # Format the schema path (this is where the validation failed)
-    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-    #         # Format the instance path (this is where the error occurred in the instance)
-    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
-
-
-    #         #  detailed error message
-    #         error_message = (
-    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-    #             f"On instance path: {instance_path}\n"
-    #             f"Schema: {error.schema}\n"
-    #             f"Instance: {error.instance}\n"
-    #             f"Message: {error.message}"
-    #         )
-    #         error_messages.append(error_message)
-
-    #         # Fill test summary dict
-
-    #         error_info = {
-    #             'collectionId': collection_id,
-    #             'url': url,
-    #             'errorType': 'Validation Error',
-    #             'failedSchemaItem': schema_path,
-    #             'failedInstanceItem': instance_path,
-    #             'errorMessage': error.message
-    #         }
-
         TEST_SUMMARY['Test Feature Collection Root']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
@@ -557,10 +668,28 @@ def est_feature_collection_root(url):
         TEST_SUMMARY['Test Feature Collection Root']['Elapsed Time'] = FEATURE_COLLECTION_ROOT_TIME
 
 @pytest.mark.parametrize("url", featureCollectionItemsUrlList)
-def est_feature_collection_items(url):
+def test_feature_collection_items(url):
+    """
+    Pytest function to validate the structure and content of GeoMet Feature Collection items JSON response.
+
+    This test performs the following for each URL in `featureCollectionItemsUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items?limit=1&f=json
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/hurricanes-wind_radii-realtime/items?limit=1&f=json'
+
     global FEATURE_COLLECTION_ITEMS_TIME
     global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
@@ -695,36 +824,6 @@ def est_feature_collection_items(url):
     output = helper_validation_error_message(errors, url, collection_id)
 
     if output['error_messages'] and output['error_info']:
-    # if errors:
-    #     # Build a detailed error message that includes schema and instance paths
-    #     error_messages = []
-    #     for error in errors:
-    #         # Format the schema path (this is where the validation failed)
-    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-    #         # Format the instance path (this is where the error occurred in the instance)
-    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
-
-
-    #         #  detailed error message
-    #         error_message = (
-    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-    #             f"On instance path: {instance_path}\n"
-    #             f"Schema: {error.schema}\n"
-    #             f"Instance: {error.instance}\n"
-    #             f"Message: {error.message}"
-    #         )
-    #         error_messages.append(error_message)
-
-    #         # Fill test summary dict
-
-    #         error_info = {
-    #             'collectionId': collection_id,
-    #             'url': url,
-    #             'errorType': 'Validation Error',
-    #             'failedSchemaItem': schema_path,
-    #             'failedInstanceItem': instance_path,
-    #             'errorMessage': error.message
-    #         }
 
         TEST_SUMMARY['Test Feature Collection Items']['Errors'] += output['error_info']
 
@@ -745,7 +844,25 @@ def est_feature_collection_items(url):
 
 
 @pytest.mark.parametrize("url", featureCollectionSingleItemsUrlList)
-def est_feature_collection_single_item(url):
+def test_feature_collection_single_item(url):
+    """
+    Pytest function to validate the structure and content of GeoMet Feature Collection single item JSON response.
+
+    This test performs the following for each URL in `featureCollectionSingleItemsUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate-normals/items/1664.62.1?f=json
     global FEATURE_COLLECTION_SINGLE_ITEM_TIME
@@ -876,37 +993,6 @@ def est_feature_collection_single_item(url):
 
     if output['error_messages'] and output['error_info']:
 
-    # if errors:
-    #     # Build a detailed error message that includes schema and instance paths
-    #     error_messages = []
-    #     for error in errors:
-    #         # Format the schema path (this is where the validation failed)
-    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-    #         # Format the instance path (this is where the error occurred in the instance)
-    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
-
-
-    #         #  detailed error message
-    #         error_message = (
-    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-    #             f"On instance path: {instance_path}\n"
-    #             f"Schema: {error.schema}\n"
-    #             f"Instance: {error.instance}\n"
-    #             f"Message: {error.message}"
-    #         )
-    #         error_messages.append(error_message)
-
-    #         # Fill test summary dict
-
-    #         error_info = {
-    #             'collectionId': collection_id,
-    #             'url': url,
-    #             'errorType': 'Validation Error',
-    #             'failedSchemaItem': schema_path,
-    #             'failedInstanceItem': instance_path,
-    #             'errorMessage': error.message
-    #         }
-
         TEST_SUMMARY['Test Feature Collection Single Item']['Errors'] += output['error_info']
 
         end_time = time.time()  # Capture end time after the test has run
@@ -926,9 +1012,27 @@ def est_feature_collection_single_item(url):
 
 
 @pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
-def est_coverage_collection_root(url):
+def test_coverage_collection_root(url):
+    """
+    Pytest function to validate the structure and content of GeoMet Coverage Collection root JSON response.
+
+    This test performs the following for each URL in `CoverageCollectionRootUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:seasonal:anomaly'
+
     global COVERAGE_COLLECTION_ROOT_TIME
     global TEST_SUMMARY
     collection_id = url.split('/collections/')[1].split('?')[0]
@@ -1013,35 +1117,6 @@ def est_coverage_collection_root(url):
     output = helper_validation_error_message(errors, url, collection_id)
 
     if output['error_messages'] and output['error_info']:
-        # Build a detailed error message that includes schema and instance paths
-        # error_messages = []
-        # for error in errors:
-        #     # Format the schema path (this is where the validation failed)
-        #     schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-        #     # Format the instance path (this is where the error occurred in the instance)
-        #     instance_path = " -> ".join(str(p) for p in error.absolute_path)
-
-
-            #  detailed error message
-            # error_message = (
-            #     f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-            #     f"On instance path: {instance_path}\n"
-            #     f"Schema: {error.schema}\n"
-            #     f"Instance: {error.instance}\n"
-            #     f"Message: {error.message}"
-            # )
-            # error_messages.append(error_message)
-
-            # Fill test summary dict
-
-            # error_info = {
-            #     'collectionId': collection_id,
-            #     'url': url,
-            #     'errorType': 'Validation Error',
-            #     'failedSchemaItem': schema_path,
-            #     'failedInstanceItem': instance_path,
-            #     'errorMessage': error.message
-            # }
 
         TEST_SUMMARY['Test Coverage Collection Root']['Errors'] += output['error_info']
 
@@ -1063,10 +1138,26 @@ def est_coverage_collection_root(url):
 
 
 @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
-def est_coverage_collection_schema(url):
-    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
+def test_coverage_collection_schema(url):
+    """
+    Pytest function to validate the structure and content of GeoMet Coverage Collection schema JSON response.
 
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:spei-12:projected/schema?f=json'
+    This test performs the following for each URL in `CoverageCollectionSchemaUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
 
     global COVERAGE_COLLECTION_SCHEMA_TIME
     global TEST_SUMMARY
@@ -1078,8 +1169,6 @@ def est_coverage_collection_schema(url):
 
     instance = response.json()
 
-    # assert response.status_code == 200
-        # assert response.status_code == 200
     try:
         assert response.status_code == 200
     except AssertionError:
@@ -1108,16 +1197,11 @@ def est_coverage_collection_schema(url):
     with open(schema_a_path, 'r') as f:
         schema_a = yaml.safe_load(f)
 
-
-
     # resource for schema a
     resourceA = Resource(contents=schema_a, specification=jsonschema.DRAFT202012)
 
-
     registry = Registry().with_resources([(f'{base_dir}', resourceA)])
 
-    # Register the schema a in the registry as a resource
-    # registry = Registry().with_resource(uri=f'file://{base_dir}/', resource=resource)
     registry = registry.crawl()
 
 
@@ -1150,13 +1234,26 @@ def est_coverage_collection_schema(url):
 
 # @pytest.mark.parametrize("url", coverageCollectionCoverageDataUrlList)
 @pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p/coverage?f=json'])
-def est_coverage_collection_coverageResponse(url):
-    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json
-    # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
-    # test with url: http://geomet-dev-31.edc-mtl.ec.gc.ca:8089/collections/weather:cansips:100km:forecast:seasonal-products/coverage?f=json&bbox=-141,45,-137,47&subset=period\(%22P02M-P04M%22\),reference_time\(%222025-03%22\)
-    #  if nthis here u good 
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:anomaly/coverage?f=json'
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/coverage?f=json&bbox=-150,41,-52,83.5'
+def test_coverage_collection_coverageResponse(url):
+    """
+    Pytest function to validate the structure and content of GeoMet Coverage Collection coverage data JSON response.
+
+    This test performs the following for each URL in `coverageCollectionCoverageDataUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p/coverage?f=json
 
     global COVERAGE_COLLECTION_COV_RESPONSE_TIME
     global TEST_SUMMARY
@@ -1165,10 +1262,6 @@ def est_coverage_collection_coverageResponse(url):
     start_time = time.time()  # Capture start time
 
     response = requests.get(url, verify="/etc/ssl/certs")
-
-    # instance = response.json()
-
-    # assert response.status_code == 200
 
     try:
         assert response.status_code == 200
@@ -1217,36 +1310,6 @@ def est_coverage_collection_coverageResponse(url):
     output = helper_validation_error_message(errors, url, collection_id)
 
     if output['error_messages'] and output['error_info']:
-    # if errors:
-    #     # Build a detailed error message that includes schema and instance paths
-    #     error_messages = []
-    #     for error in errors:
-    #         # Format the schema path (this is where the validation failed)
-    #         schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-    #         # Format the instance path (this is where the error occurred in the instance)
-    #         instance_path = " -> ".join(str(p) for p in error.absolute_path)
-
-
-    #         #  detailed error message
-    #         error_message = (
-    #             f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-    #             f"On instance path: {instance_path}\n"
-    #             f"Schema: {error.schema}\n"
-    #             f"Instance: {error.instance}\n"
-    #             f"Message: {error.message}"
-    #         )
-    #         error_messages.append(error_message)
-
-    #         # Fill test summary dict
-
-    #         error_info = {
-    #             'collectionId': collection_id,
-    #             'url': url,
-    #             'errorType': 'Validation Error',
-    #             'failedSchemaItem': schema_path,
-    #             'failedInstanceItem': instance_path,
-    #             'errorMessage': error.message
-    #         }
 
         TEST_SUMMARY['Test Coverage Collection Coverage Response']['Errors'] += output['error_info']
 
@@ -1254,7 +1317,6 @@ def est_coverage_collection_coverageResponse(url):
         elapsed_time = end_time - start_time
         COVERAGE_COLLECTION_COV_RESPONSE_TIME += elapsed_time
         TEST_SUMMARY['Test Coverage Collection Coverage Response']['Elapsed Time'] = COVERAGE_COLLECTION_COV_RESPONSE_TIME
-
 
         # Raise a ValidationError with all error messages
         raise ValidationError("\n\n".join(output['error_messages']))
@@ -1270,10 +1332,33 @@ def est_coverage_collection_coverageResponse(url):
 # @pytest.mark.parametrize("url", CoverageCollectionSchemaUrlList)
 @pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p/schema?f=json'])
 def test_coverage_collection_eachVariableProperty(url):
-    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg/schema?f=json
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly/schema?f=json'
+    """
+    Pytest function to validate the structure and content of GeoMet Coverage Collection coverage property data JSON response.
+
+    This test performs the following for each URL in `CoverageCollectionSchemaUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p/schema?f=json
+
     global COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
     global TEST_SUMMARY
+
+    error_message_list = []
+    error_info_list = []
+
+
     collection_id = url.split('/collections/')[1].split('?')[0]
 
     start_time = time.time()  # Capture start time
@@ -1303,41 +1388,63 @@ def test_coverage_collection_eachVariableProperty(url):
         raise
 
     for property in instance['properties']:
-        a=url.replace('/schema?f=json', f'/coverage?f=json&properties={property}')
+        newUrl = url.replace('/schema?f=json', f'/coverage?f=json&properties={property}')
 
-        helper_coverage_response_validation(a, 'Test Coverage Collection Variable Property', COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME, start_time)
+        output = helper_coverage_response_validation(newUrl)
 
-        # output = helper_validation_error_message()
+        error_info_list += output['error_info']
+        error_message_list += output['error_messages']
 
-        # if output['error_info'] and output['error_messages']:
+    if error_info_list and error_message_list:
 
-        #     TEST_SUMMARY['Test Coverage Collection Variable Property']['Errors'] += output['error_info']
+        TEST_SUMMARY['Test Coverage Collection Variable Property']['Errors'] += error_info_list
 
-        #     end_time = time.time()  # Capture end time after the test has run
-        #     elapsed_time = end_time - start_time
-        #     COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
-        #     TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
 
-        #     # Raise a ValidationError with all error messages
-        #     raise ValidationError("\n\n".join(output['error_messages']))
 
-        # else:
-        #     end_time = time.time()  # Capture end time after the test has run
-        #     elapsed_time = end_time - start_time
-        #     COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
-        #     TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
+        print('here you go', error_message_list)
 
-        # est_coverage_collection_coverageResponse(a)
+        # Raise a ValidationError with all error messages
+        raise ValidationError("\n\n".join(error_message_list))
 
-# WAIT UNTIL NEW EXTENTS COME FOR COVERAGE COLLECTIONS
+    else:
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Variable Property']['Elapsed Time'] = COVERAGE_COLLECTION_VARIABLE_PROPERTY_TIME
+
 # @pytest.mark.parametrize("url", CoverageCollectionRootUrlList)
 @pytest.mark.parametrize("url", ['https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p?f=json'])
 def test_coverage_collection_extents(url):
-    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:dcs:projected:annual:P20Y-Avg?f=json'
-    # url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/climate:cangrd:historical:annual:anomaly?f=json'
+    """
+    Pytest function to validate the structure and content of GeoMet Coverage Collection coverage extent data JSON response.
+
+    This test performs the following for each URL in `CoverageCollectionSchemaUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
+
+    # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/collections/weather:rdpa:10km:6p?f=json
+
     global COVERAGE_COLLECTION_EXTENTS_TIME
     global TEST_SUMMARY
+
+    error_message_list = []
+    error_info_list = []
 
     collection_id = url.split('/collections/')[1].split('?')[0]
 
@@ -1367,102 +1474,91 @@ def test_coverage_collection_extents(url):
 
     instance = response.json()
 
-    # print(instance['id'])
     for i in instance['extent']:
-        print(i)
 
         if i == 'spatial':
             bbox = instance['extent']['spatial']['bbox'][0]
             bboxString = ",".join(map(str, bbox))
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&bbox={bboxString}')
-            # print(newUrl)
+
         elif i == 'period':
             period = instance['extent']['period']['interval'][0]
-            # print(period)
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset=period("{period}")')
-            # print(newUrl)
 
         elif i == 'reference_time':
             reference_time = instance['extent']['reference_time']['interval'][0][0]
-            # print(reference_time)
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset=reference_time("{reference_time}")')
-            # print(newUrl)
 
         elif i == 'temporal':
             temporal = instance['extent']['temporal']['interval'][0]
-            # print(temporal)
-            newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&datetime={temporal[0]}/{temporal[1]}')
-            print(newUrl)
+            newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&datetime={temporal[0]}')
 
         elif i == 'percentile':
             percentile = instance['extent']['percentile']['interval'][0][0]
-            # print(reference_time)
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset=percentile("{percentile}")')
-            print(newUrl)
 
         elif i == 'scenario':
             scenario = instance['extent']['scenario']['interval'][0][0]
-            # print(scenario)
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset=scenario("{scenario}")')
-            print(newUrl)
 
         elif i == 'season':
             season = instance['extent']['season']['interval'][0][0]
-            # print(season)
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset=season("{season}")')
-            print(newUrl)
 
         elif re.match(r"^P\d+Y-Avg$", i):
             P20YAvg = instance['extent'][i]['interval'][0][0]
-            # print(season)
             newUrl = url.replace(f'{instance["id"]}?f=json', f'{instance["id"]}/coverage?f=json&subset={i}("{P20YAvg}")')
-            print(newUrl)
-            print("Matched pattern")
 
-        helper_coverage_response_validation(newUrl, 'Test Coverage Collection Extents', COVERAGE_COLLECTION_EXTENTS_TIME, start_time)
+        output = helper_coverage_response_validation(newUrl)
 
+        error_info_list += output['error_info']
+        error_message_list += output['error_messages']
 
-        # output = helper_coverage_response_validation(newUrl)
+    if error_info_list and error_message_list:
 
-        # if output['error_info'] and output['error_messages']:
+        TEST_SUMMARY['Test Coverage Collection Extents']['Errors'] += error_info_list
 
-        #     TEST_SUMMARY['Test Coverage Collection Extents']['Errors'].append(output['error_info'])
-
-        #     end_time = time.time()  # Capture end time after the test has run
-        #     elapsed_time = end_time - start_time
-        #     COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
-        #     TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
-
-        #     # Raise a ValidationError with all error messages
-        #     raise ValidationError("\n\n".join(output['error_messages']))
-
-        # else:
-        #     end_time = time.time()  # Capture end time after the test has run
-        #     elapsed_time = end_time - start_time
-        #     COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
-        #     TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
-    # bbox = instance['extent']['spatial']['bbox'][0]
-    # bboxString = ",".join(map(str, bbox))
-    # print('over hereeeee')
-    # print(instance['extent']['spatial']['bbox'][0])
-
-    # newUrl=url.replace('?f=json', '/schema?f=json')
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
 
 
+        # Raise a ValidationError with all error messages
+        raise ValidationError("\n\n".join(error_message_list))
 
-    # response = requests.get(newUrl, verify="/etc/ssl/certs")
-    # assert response.status_code == 200
-    # instance = response.json()
-
+    else:
+        end_time = time.time()  # Capture end time after the test has run
+        elapsed_time = end_time - start_time
+        COVERAGE_COLLECTION_EXTENTS_TIME += elapsed_time
+        TEST_SUMMARY['Test Coverage Collection Extents']['Elapsed Time'] = COVERAGE_COLLECTION_EXTENTS_TIME
 
 
 @pytest.mark.parametrize("url", processUrlList)
-def est_process_collection(url):
+def test_process_collection(url):
+    """
+    Pytest function to validate the structure and content of GeoMet Process Collection root JSON response.
+
+    This test performs the following for each URL in `processUrlList`:
+    - Sends a GET request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a set of predefined JSON Schemas
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
 
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill?f=json
     global PROCESS_COLLECTION_ROOT_TIME
     global TEST_SUMMARY
-    collection_id = url.split('/collections/')[1].split('?')[0]
+    collection_id = url.split('/processes/')[1].split('?')[0]
 
     start_time = time.time()  # Capture start time
 
@@ -1514,43 +1610,12 @@ def est_process_collection(url):
     registry = registry.crawl()
 
     validator = Draft202012Validator(schema_a, registry=registry)
-    # validator.validate(instance)
+
     errors = list(validator.iter_errors(instance))
 
     output = helper_validation_error_message(errors, url, collection_id)
 
     if output['error_messages'] and output['error_info']:
-
-    # if errors:
-        # Build a detailed error message that includes schema and instance paths
-        # error_messages = []
-        # for error in errors:
-        #     # Format the schema path (this is where the validation failed)
-        #     schema_path = " -> ".join(str(p) for p in error.absolute_schema_path)
-        #     # Format the instance path (this is where the error occurred in the instance)
-        #     instance_path = " -> ".join(str(p) for p in error.absolute_path)
-
-
-        #     #  detailed error message
-        #     error_message = (
-        #         f"\n\nFailed validating '{error.validator}' in schema path: {schema_path}\n"
-        #         f"On instance path: {instance_path}\n"
-        #         f"Schema: {error.schema}\n"
-        #         f"Instance: {error.instance}\n"
-        #         f"Message: {error.message}"
-        #     )
-        #     error_messages.append(error_message)
-
-        #     # Fill test summary dict
-
-        #     error_info = {
-        #         'collectionId': collection_id,
-        #         'url': url,
-        #         'errorType': 'Validation Error',
-        #         'failedSchemaItem': schema_path,
-        #         'failedInstanceItem': instance_path,
-        #         'errorMessage': error.message
-        #     }
 
         TEST_SUMMARY['Test Process Collection Root']['Errors'] += output['error_info']
 
@@ -1570,16 +1635,33 @@ def est_process_collection(url):
     TEST_SUMMARY['Test Process Collection Root']['Elapsed Time'] = PROCESS_COLLECTION_ROOT_TIME
 
 @pytest.mark.parametrize("url", processExecutionUrlList)
-def est_process_collection_execute(url):
+def test_process_collection_execute(url):
+    """
+    Pytest function to validate the structure and content of GeoMet Process Collection execute response.
+
+    This test performs the following for each URL in `processExecutionUrlList`:
+    - Sends a POST request to the specified feature collection URL.
+    - Asserts that the response has a 200 OK status.
+    - Loads the JSON response and validates it against a predefined Schema
+    - Uses a schema registry to resolve internal schema references.
+    - Collects and reports validation errors with detailed messages and context.
+    - Updates a global `TEST_SUMMARY` object with error details and elapsed test time.
+
+    Parameters:
+    url (str): The feature collection metadata URL to validate.
+
+    Raises:
+    AssertionError: If the HTTP response status code is not 200.
+    ValidationError: If the JSON does not conform to the expected schema(s).
+    """
     # test with url: https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill/execution
 
     global PROCESS_COLLECTION_EXECUTE_TIME
     global TEST_SUMMARY
+    print(url)
     collection_id = url.split('/')[5]
-
+    print(url.split('/'))
     start_time = time.time()  # Capture start time
-
-    url = 'https://geomet-dev-31-nightly.edc-mtl.ec.gc.ca/msc-pygeoapi/processes/raster-drill/execution'
 
     # Data to send with the request (typically a dictionary)
     data = {
@@ -1594,9 +1676,7 @@ def est_process_collection_execute(url):
     # Sending a POST request with the data
     response = requests.post(url, json=data, verify="/etc/ssl/certs")
 
-    # assert response.status_code == 200
     # Checking the response status code
-    # assert response.status_code == 200
     try:
         assert response.status_code == 200
     except AssertionError:
